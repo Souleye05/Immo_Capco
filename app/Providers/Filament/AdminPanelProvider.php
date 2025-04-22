@@ -2,6 +2,11 @@
 
 namespace App\Providers\Filament;
 
+use App\Filament\Widgets\EtatDesFacturesChart;
+use App\Filament\Widgets\KpiStats;
+use App\Filament\Widgets\RevenusChart;
+use App\Filament\Widgets\RevenusVsDepensesChart;
+use App\Filament\Widgets\TypesDeBiensChart;
 use Filament\Http\Middleware\Authenticate;
 use Filament\Http\Middleware\AuthenticateSession;
 use Filament\Http\Middleware\DisableBladeIconComponents;
@@ -35,10 +40,15 @@ class AdminPanelProvider extends PanelProvider
             ->pages([
                 Pages\Dashboard::class,
             ])
-            ->discoverWidgets(in: app_path('Filament/Widgets'), for: 'App\\Filament\\Widgets')
+            // ->discoverWidgets(in: app_path('Filament/Widgets'), for: 'App\\Filament\\Widgets')
             ->widgets([
-                Widgets\AccountWidget::class,
-                Widgets\FilamentInfoWidget::class,
+                // Widgets\AccountWidget::class,
+                // Widgets\FilamentInfoWidget::class,
+                KpiStats::class,
+                TypesDeBiensChart::class,
+                EtatDesFacturesChart::class,
+                RevenusChart::class,
+                RevenusVsDepensesChart::class,
             ])
             ->middleware([
                 EncryptCookies::class,
