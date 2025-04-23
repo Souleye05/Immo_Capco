@@ -50,15 +50,58 @@ class PaymentResource extends Resource
                     ->options(Tenant::all()->pluck('name', 'id')->toArray())
                     ->searchable()
                     ->reactive()
-                    ->afterStateUpdated(fn ($state, callable $set) =>
-                     $set('flat_id', Flat::find($state)?->id ?? 0) and
-                     $set('amount', Flat::find($state)?->loyer ?? 0) ),
+                    ->createOptionForm([
+                        TextInput::make('name')
+                            ->label('Nom & Prénoms du locataire')
+                            ->required(),
+                        TextInput::make('phone')
+                            ->label('Téléphone')
+                            ->tel()
+                            ->required(),
+                        TextInput::make('address')
+                            ->label('Adresse')
+                            ->required(),
+                        // Select::make('flat_id')
+                        //     ->label('Appartement')
+                        //     ->options(Flat::all()->pluck('reference', 'id')->toArray())
+                        //     ->searchable(),
+                            // ->required(),
 
+                    ])
+                    ->createOptionUsing(function ($data) {
+                        $tenant = Tenant::create([
+                            'name' => $data['name'],
+                            'phone' => $data['phone'],
+                            'address' => $data['address'],
+                            // 'flat_id' => $data['flat_id']
+                        ]);
 
+                        return $tenant->id;
+                    })
+                    ->createOptionAction(function ($action) {
+                        return $action
+                            ->modalHeading('Créer un nouveau locataire')
+                            ->modalButton('Créer locataire')
+                            ->modalWidth('lg');
+                    })
+                    ->afterStateUpdated(function ($state, callable $set) {
+                        // On récupère le locataire sélectionné
+                        $tenant = Tenant::with('flat')->find($state);
+                    
+                        if ($tenant && $tenant->flat) {
+                            $set('flat_id', $tenant->flat->id);
+                            $set('amount', $tenant->flat->loyer);
+                        } else {
+                            $set('flat_id', null);
+                            $set('amount', 0);
+                        }
+                    }),
+                    
                     Select::make('flat_id')
                     ->label('Appartement')
-                    ->relationship('flat', 'reference'),
-                    // ->dehydrated(true),
+                    ->relationship('flat', 'reference', fn ($qery) => $qery->whereNotNull('reference'))
+                    ->disabled()
+                    ->dehydrated(true),
                 
 
                 TextInput::make('amount')

@@ -5,6 +5,7 @@ namespace App\Filament\Resources;
 use Filament\Forms;
 use Filament\Tables;
 use App\Models\Expense;
+use App\Models\Property;
 use Filament\Forms\Form;
 use Filament\Tables\Table;
 use Filament\Resources\Resource;
@@ -33,7 +34,55 @@ class ExpenseResource extends Resource
             ->schema([
                 Select::make('property_id')
                     ->label('Propriété')
-                    ->relationship('property', 'name'),
+                    ->relationship('property', 'name')
+                    ->searchable()
+                    ->preload()
+                    ->createOptionForm([
+                        Select::make('type')
+                            ->label('Type de propriété')
+                            ->options([
+                                'Immeuble' => 'Immeuble',
+                                'Villa' => 'Villa',
+                                'Bureau' => 'Bureau'
+                            ])
+                            ->required(),
+                        TextInput::make('name')
+                            ->label('Nom & Prénoms')
+                            ->required(),
+                        TextInput::make('address')
+                            ->label('Adresse')
+                            ->required(),
+                        TextInput::make('commission_value')
+                            ->label('Commission sur la propriété')
+                            ->numeric(),
+                        Select::make('commission_unit')
+                            ->label('Unité')
+                            ->options([
+                                '%' => '%',
+                                'F CFA' => 'F CFA'
+                            ])
+                            ->required(),
+                        TextInput::make('number_flat')
+                            ->label("Nombre d'appartement dans la propriété")
+                            ->numeric()
+                            ->minValue(1),
+                    ])
+                    ->createOptionUsing(function (array $data) {
+                        return Property::create([
+                            'type' => $data['type'],
+                            'name' => $data['name'],
+                            'address' => $data['address'],
+                            'commission_value' => $data['commission_value'],
+                            'commission_unit' => $data['commission_unit'],
+                            'number_flat' => $data['number_flat'],
+                        ])->id;
+                    })
+                    ->createOptionAction(function ($action) {
+                        return $action
+                            ->modalHeading('Créer une nouvelle propriété')
+                            ->modalButton('Créer propriété')
+                            ->modalWidth('lg');
+                    }),
                 Select::make('type')
                     ->label('Type de dépense')
                     ->options(['Biens' => 'Biens', 'Local' => 'Local'])
@@ -58,7 +107,6 @@ class ExpenseResource extends Resource
                         'Virement' => 'Vrirement',
                         'Espèces' => 'Espèces',
                     ]),
-
             ]);
     }
 

@@ -1,6 +1,6 @@
 <?php
 
-namespace App\Models;
+namespace App\Models;           
 
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
@@ -13,7 +13,7 @@ class Tenant extends Model
         'name',
         'phone',
         'address',
-        // 'flat_id'
+        'flat_id'
     ];
 
     public function flat()

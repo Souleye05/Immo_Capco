@@ -31,18 +31,47 @@ class RemittanceResource extends Resource
     return $form
         ->schema([
             Select::make('owner_id')
-                ->label('Propriétaire')
-                ->options(Owner::all()->pluck('name', 'id'))
-                ->reactive()
-                ->afterStateUpdated(function ($state, callable $set) {
-                    $owner = Owner::find($state);
-                    if ($owner) {
-                        $set('property_id', $owner->property_id ?? null); // À adapter selon ton modèle
-                    } else {
-                        $set('property_id', null);
-                    }
-                })
-                ->required(),
+    ->label('Propriétaire')
+    ->options(Owner::all()->pluck('name', 'id'))
+    ->searchable()
+    ->reactive()
+    ->required()
+    ->createOptionForm([
+        TextInput::make('name')
+            ->label('Nom & Prénoms')
+            ->required()
+            ->maxLength(255),
+
+        TextInput::make('phone')
+            ->label('Téléphone')
+            ->tel()
+            ->required()
+            ->maxLength(255),
+
+        Select::make('property_id')
+            ->label('Propriété')
+            ->options(\App\Models\Property::all()->pluck('name', 'id'))
+            ->required(),
+    ])
+    ->createOptionUsing(function (array $data) {
+        $owner = Owner::create($data);
+        return $owner->id; // Retourne l'ID pour sélectionner automatiquement le nouveau propriétaire
+    })
+    ->createOptionAction(function ($action) {
+        return $action
+            ->modalHeading('Créer un nouveau propriétaire')
+            ->modalButton('Créer')
+            ->modalWidth('lg');
+    })
+    ->afterStateUpdated(function ($state, callable $set) {
+        $owner = Owner::find($state);
+        if ($owner) {
+            $set('property_id', $owner->property_id);
+        } else {
+            $set('property_id', null);
+        }
+    }),
+
 
             TextInput::make('property_id')
                 ->label('ID de la propriété')

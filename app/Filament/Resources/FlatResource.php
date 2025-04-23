@@ -31,12 +31,68 @@ class FlatResource extends Resource
     public static function form(Form $form): Form
     {
         return $form
-            ->schema([
-                Select::make('property_id')
-                    ->label('Propriété')
-                    ->options(Property::all()->pluck('name', 'id'))
-                    ->reactive()
-                    ->afterStateUpdated(fn($state, callable $set) => $set('property_commission_value', Property::find($state)?->commission_value ?? 0) and $set('property_commission_unit', Property::find($state)?->commission_unit ?? 0)),
+    ->schema([
+        Select::make('property_id')
+            ->label('Propriété')
+            ->options(Property::all()->pluck('name', 'id'))
+            ->searchable()
+            ->reactive()
+            ->createOptionForm([
+                Select::make('type')
+                    ->label('Type de propriété')
+                    ->options([
+                        'Immeuble' => 'Immeuble',
+                        'Villa' => 'Villa',
+                        'Bureau' => 'Bureau'
+                    ])
+                    ->required(),
+                TextInput::make('name')
+                    ->label('Nom')
+                    ->required(),
+                TextInput::make('address')
+                    ->label('Adresse')
+                    ->required(),
+                TextInput::make('commission_value')
+                    ->label('Commission sur la propriété')
+                    ->numeric(),
+                Select::make('commission_unit')
+                    ->label('Unité')
+                    ->options([
+                        '%' => '%',
+                        'F CFA' => 'F CFA'
+                    ])
+                    ->required(),
+                TextInput::make('number_flat')
+                    ->label("Nombre d'appartement dans la propriété")
+                    ->numeric()
+                    ->minValue(1),
+            ])
+            ->createOptionUsing(function (array $data) {
+                return Property::create([
+                    'type' => $data['type'],
+                    'name' => $data['name'],
+                    'address' => $data['address'],
+                    'commission_value' => $data['commission_value'],
+                    'commission_unit' => $data['commission_unit'],
+                    'number_flat' => $data['number_flat'],
+                ])->id;
+            })
+            ->createOptionAction(function ($action) {
+                return $action
+                    ->modalHeading('Créer une nouvelle propriété')
+                    ->modalButton('Créer propriété')
+                    ->modalWidth('lg');
+            })
+            ->afterStateUpdated(function ($state, callable $set) {
+                if ($state) {
+                    $property = Property::find($state);
+                    if ($property) {
+                        $set('property_commission_value', $property->commission_value);
+                        $set('property_commission_unit', $property->commission_unit);
+                    }
+                }
+            }),
+
                 Select::make('type')
                     ->options([
                         'chambre' => 'Chambre',
@@ -50,12 +106,39 @@ class FlatResource extends Resource
                         'f6+' => 'F6+',
                     ])
                     ->required(),
-                Select::make('tenant_id')
+                    Select::make('tenant_id')
                     ->label('Locataire')
                     ->options(Tenant::all()->pluck('name', 'id')->toArray())
-                    ->searchable(),
+                    ->searchable()
+                    ->createOptionForm([
+                        TextInput::make('name')
+                            ->label('Nom & Prénoms du locataire')
+                            ->required(),
+                        TextInput::make('phone')
+                            ->label('Téléphone')
+                            ->tel()
+                            ->required(),
+                        TextInput::make('address')
+                            ->label('Adresse')
+                            ->required(),
+                    ])
+                    ->createOptionUsing(function (array $data) {
+                        return Tenant::create([
+                            'name' => $data['name'],
+                            'phone' => $data['phone'],
+                            'address' => $data['address'],
+                        ])->id;
+                    })
+                    ->createOptionAction(function ($action) {
+                        return $action
+                            ->modalHeading('Créer un nouveau locataire')
+                            ->modalButton('Créer locataire')
+                            ->modalWidth('lg');
+                    }),
+
                 TextInput::make('reference')
                     ->label("Référence de l'appartement"),
+
                 TextInput::make('loyer')
                     ->label('Montant du loyer')
                     ->numeric()

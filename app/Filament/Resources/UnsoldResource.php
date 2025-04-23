@@ -4,6 +4,7 @@ namespace App\Filament\Resources;
 
 use App\Filament\Resources\UnsoldResource\Pages;
 use App\Filament\Resources\UnsoldResource\RelationManagers;
+use App\Models\Flat;
 use App\Models\Unsold;
 use Filament\Forms;
 use Filament\Forms\Form;
@@ -33,17 +34,67 @@ class UnsoldResource extends Resource
     public static function form(Form $form): Form
     {
         return $form
-            ->schema([
-                TextInput::make('reference')
-                    ->default('UN-' . random_int(100000, 999999))
-                    ->disabled()
-                    ->required(),
-                Select::make('tenant_id')
-                    ->label('Locataire')
-                    ->options(Tenant::all()->pluck('name', 'id')->toArray())
-                    ->searchable()
-                    ->reactive()
-                    ->afterStateUpdated(fn($state, callable $set) => $set('payment_id', Payment::find($state)?->numero ?? 0)),
+        ->schema([
+            TextInput::make('reference')
+                ->default('UN-' . random_int(100000, 999999))
+                ->disabled()
+                // ->dehydrated(true)
+                ->required(),
+
+            Select::make('tenant_id')
+                ->label('Locataire')
+                ->options(Tenant::all()->pluck('name', 'id')->toArray())
+                ->searchable()
+                ->reactive()
+                ->createOptionForm([
+                    TextInput::make('name')
+                        ->label('Nom & Prénoms du locataire')
+                        ->required(),
+                    TextInput::make('phone')
+                        ->label('Téléphone')
+                        ->tel()
+                        ->required(),
+                    TextInput::make('address')
+                        ->label('Adresse')
+                        ->required(),
+                    // Select::make('flat_id')
+                    //     ->label('Appartement')
+                    //     ->relationship('flat', 'reference')
+                    //     ->searchable()
+                    //     ->required(),
+                ])
+                ->createOptionUsing(function ($data) {
+                    $tenant = Tenant::create([
+                        'name' => $data['name'],
+                        'phone' => $data['phone'],
+                        'address' => $data['address'],
+                        // 'flat_id' => $data['flat_id'],
+                    ]);
+
+                    return $tenant->id;
+                })
+                ->createOptionAction(function ($action) {
+                    return $action
+                        ->modalHeading('Créer un nouveau locataire')
+                        ->modalButton('Créer locataire')
+                        ->modalWidth('lg');
+                })
+                ->afterStateUpdated(function ($state, callable $set) {
+                    if ($state) {
+                        // Pour la facture (payment_id)
+                        $set('payment_id', Payment::find($state)?->numero ?? 0);
+                        
+                        // Pour le montant, si vous voulez récupérer le loyer du locataire
+                        $tenant = Tenant::find($state);
+                        if ($tenant && $tenant->flat_id) {
+                            $flat = Flat::find($tenant->flat_id);
+                            if ($flat) {
+                                $set('amount', $flat->loyer);
+                            }
+                        }
+                    }
+                }),
+                    
                 TextInput::make('amount'),
                 Textarea::make('motif')
                     ->maxLength(65535),

@@ -27,22 +27,69 @@ class OwnerResource extends Resource
     public static ?string $label = 'Proprétaire';
 
     public static function form(Form $form): Form
-    {
-        return $form
-            ->schema([
-                TextInput::make('name')
-                    ->label('Nom & Prénoms')
-                    ->required()
-                    ->maxLength(255),
-                TextInput::make('phone')
-                    ->tel()
-                    ->required()
-                    ->maxLength(255),
-                Select::make('property_id')
-                    ->label('Propriété')
-                    ->options(Property::all()->pluck('name', 'id'))
-            ]);
-    }
+{
+    return $form
+        ->schema([
+            TextInput::make('name')
+                ->label('Nom & Prénoms')
+                ->required()
+                ->maxLength(255),
+            TextInput::make('phone')
+                ->tel()
+                ->required()
+                ->maxLength(255),
+            Select::make('property_id')
+                ->label('Propriété')
+                ->options(Property::all()->pluck('name', 'id'))
+                ->searchable()
+                ->createOptionForm([
+                    Select::make('type')
+                        ->label('Type de propriété')
+                        ->options([
+                            'Immeuble' => 'Immeuble',
+                            'Villa' => 'Villa',
+                            'Bureau' => 'Bureau'
+                        ])
+                        ->required(),
+                    TextInput::make('name')
+                        ->label('Nom')
+                        ->required(),
+                    TextInput::make('address')
+                        ->label('Adresse')
+                        ->required(),
+                    TextInput::make('commission_value')
+                        ->label('Commission sur la propriété')
+                        ->numeric(),
+                    Select::make('commission_unit')
+                        ->label('Unité')
+                        ->options([
+                            '%' => '%',
+                            'F CFA' => 'F CFA'
+                        ])
+                        ->required(),
+                    TextInput::make('number_flat')
+                        ->label("Nombre d'appartement dans la propriété")
+                        ->numeric()
+                        ->minValue(1),
+                ])
+                ->createOptionUsing(function (array $data) {
+                    return Property::create([
+                        'type' => $data['type'],
+                        'name' => $data['name'],
+                        'address' => $data['address'],
+                        'commission_value' => $data['commission_value'],
+                        'commission_unit' => $data['commission_unit'],
+                        'number_flat' => $data['number_flat'],
+                    ])->id;
+                })
+                ->createOptionAction(function ($action) {
+                    return $action
+                        ->modalHeading('Créer une nouvelle propriété')
+                        ->modalButton('Créer propriété')
+                        ->modalWidth('lg');
+                })
+        ]);
+}
 
     public static function table(Table $table): Table
     {
