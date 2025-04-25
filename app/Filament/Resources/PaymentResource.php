@@ -99,7 +99,7 @@ class PaymentResource extends Resource
                     
                     Select::make('flat_id')
                     ->label('Appartement')
-                    ->relationship('flat', 'reference', fn ($qery) => $qery->whereNotNull('reference'))
+                    ->relationship('flat', 'reference')
                     ->disabled()
                     ->dehydrated(true),
                 

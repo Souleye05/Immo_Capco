@@ -14,7 +14,7 @@ class Unsold extends Model
         'amount',
         'motif',
         'reference',
-        'etat',
+        'status',
         'date',
     ];
 
