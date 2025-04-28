@@ -15,6 +15,8 @@ return new class extends Migration
             $table->id();
             $table->foreignId('property_id')->nullable()->cascadeOnDelete();
             $table->foreignId('flat_id')->nullable()->cascadeOnDelete();
+            $table->foreignId('prestataire_id')->nullable()->constrained()->nullOnDelete();
+            $table->string('titre')->nullable();
             $table->string('type')->nullable();
             $table->text('libelle')->nullable();
             $table->decimal('amount',13,0)->nullable();
