@@ -12,6 +12,9 @@ class Expense extends Model
     protected $fillable = [
         'property_id',
         'flat_id',
+        'prestataire_id',
+        'categorie_depense_id',
+        'titre',
         'type',
         'libelle',
         'amount',
@@ -20,7 +23,24 @@ class Expense extends Model
     ];
 
     public function property()
-    {
-        return $this->belongsTo(Property::class);
-    }
+{
+    return $this->belongsTo(Property::class);
 }
+
+public function prestataire()
+{
+    return $this->belongsTo(Prestataire::class);
+}
+
+public function categorie()
+{
+    return $this->belongsTo(CategorieDepense::class, 'categorie_depense_id');
+}
+
+public function flat()
+{
+    return $this->belongsTo(Flat::class, 'flat_id');
+}
+}
+
+

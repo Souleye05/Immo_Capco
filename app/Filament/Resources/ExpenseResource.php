@@ -2,6 +2,9 @@
 
 namespace App\Filament\Resources;
 
+use App\Models\CategorieDepense;
+use App\Models\DepenseType;
+use App\Models\Prestataire;
 use Filament\Forms;
 use Filament\Tables;
 use App\Models\Expense;
@@ -10,6 +13,7 @@ use Filament\Forms\Form;
 use Filament\Tables\Table;
 use Filament\Resources\Resource;
 use Filament\Forms\Components\Select;
+use Filament\Forms\Components\Fieldset;
 use Filament\Forms\Components\TextInput;
 use Filament\Forms\Components\DatePicker;
 use Illuminate\Database\Eloquent\Builder;
@@ -29,97 +33,213 @@ class ExpenseResource extends Resource
 
 
     public static function form(Form $form): Form
-    {
-        return $form
-            ->schema([
-                Select::make('property_id')
-                    ->label('Propriété')
-                    ->relationship('property', 'name')
-                    ->searchable()
-                    ->preload()
-                    ->createOptionForm([
-                        Select::make('type')
-                            ->label('Type de propriété')
-                            ->options([
-                                'Immeuble' => 'Immeuble',
-                                'Villa' => 'Villa',
-                                'Bureau' => 'Bureau'
-                            ])
-                            ->required(),
-                        TextInput::make('name')
-                            ->label('Nom & Prénoms')
-                            ->required(),
-                        TextInput::make('address')
-                            ->label('Adresse')
-                            ->required(),
-                        TextInput::make('commission_value')
-                            ->label('Commission sur la propriété')
-                            ->numeric(),
-                        Select::make('commission_unit')
-                            ->label('Unité')
-                            ->options([
-                                '%' => '%',
-                                'F CFA' => 'F CFA'
-                            ])
-                            ->required(),
-                        TextInput::make('number_flat')
-                            ->label("Nombre d'appartement dans la propriété")
-                            ->numeric()
-                            ->minValue(1),
-                    ])
-                    ->createOptionUsing(function (array $data) {
-                        return Property::create([
-                            'type' => $data['type'],
-                            'name' => $data['name'],
-                            'address' => $data['address'],
-                            'commission_value' => $data['commission_value'],
-                            'commission_unit' => $data['commission_unit'],
-                            'number_flat' => $data['number_flat'],
-                        ])->id;
-                    })
-                    ->createOptionAction(function ($action) {
-                        return $action
-                            ->modalHeading('Créer une nouvelle propriété')
-                            ->modalButton('Créer propriété')
-                            ->modalWidth('lg');
-                    }),
-                Select::make('type')
-                    ->label('Type de dépense')
-                    ->options(['Biens' => 'Biens', 'Local' => 'Local'])
-                    ->required(),
-                MarkdownEditor::make('libelle')
-                    ->columnSpan('full'),
-                DatePicker::make('payment_date')
-                    ->label('Date du paiement')
-                    ->suffixIcon('heroicon-o-calendar-date-range')
-                    ->native(false),
-                TextInput::make('amount')
-                    ->label('Montant')
-                    ->numeric(),
-                Select::make('payment_method')
-                    ->label('Méthode de paiement')
-                    ->searchable()
-                    ->options([
-                        'OM' => 'OM',
-                        'Wave' => 'Wave',
-                        'Free Money' => 'Free Money',
-                        'Chèque' => 'Chèque',
-                        'Virement' => 'Vrirement',
-                        'Espèces' => 'Espèces',
-                    ]),
-            ]);
-    }
+{
+    return $form
+        ->schema([
+            // Propriété
+            Select::make('property_id')
+                ->label('Propriété')
+                ->options(Property::all()->pluck('full_name', 'id'))
+                ->searchable()
+                ->preload()
+                ->required()
+                ->live()
+                ->afterStateUpdated(fn (callable $set) => $set('flat_id', null))
+                ->createOptionForm([
+                    Select::make('type')
+                        ->label('Type de propriété')
+                        ->options([
+                            'Immeuble' => 'Immeuble',
+                            'Villa' => 'Villa',
+                            'Bureau' => 'Bureau'
+                        ])
+                        ->required(),
+                    TextInput::make('name')
+                        ->label('Nom & Prénoms')
+                        ->required(),
+                    TextInput::make('address')
+                        ->label('Adresse')
+                        ->required(),
+                    TextInput::make('commission_value')
+                        ->label('Commission sur la propriété')
+                        ->numeric(),
+                    Select::make('commission_unit')
+                        ->label('Unité')
+                        ->options([
+                            '%' => '%',
+                            'F CFA' => 'F CFA'
+                        ])
+                        ->required(),
+                    TextInput::make('number_flat')
+                        ->label("Nombre d'appartement dans la propriété")
+                        ->numeric()
+                        ->minValue(1),
+                ])
+                ->createOptionUsing(function (array $data) {
+                    return Property::create([
+                        'type' => $data['type'],
+                        'name' => $data['name'],
+                        'address' => $data['address'],
+                        'commission_value' => $data['commission_value'],
+                        'commission_unit' => $data['commission_unit'],
+                        'number_flat' => $data['number_flat'],
+                    ])->id;
+                })
+                ->createOptionAction(function ($action) {
+                    return $action
+                        ->modalHeading('Créer une nouvelle propriété')
+                        ->modalButton('Créer propriété')
+                        ->modalWidth('lg');
+                }),
+
+            // Appartement
+            Select::make('flat_id')
+                ->label('Appartement')
+                ->options(function (callable $get) {
+                    $propertyId = $get('property_id');
+                    if (!$propertyId) {
+                        return [];
+                    }
+            
+                    $property = Property::with('flats')->find($propertyId);
+            
+                    if (!$property || $property->flats->isEmpty()) {
+                        return [];
+                    }
+            
+                    return $property->flats->pluck('type', 'id')->toArray();
+                })
+                ->searchable()
+                ->hint('Sélectionnez l\'appartement concerné')
+                ->required(),
+
+            // Prestataire
+            Select::make('prestataire_id')
+                ->label('Prestataire')
+                ->options(function () {
+                    return Prestataire::all()->pluck('full_name', 'id');
+                })
+                ->searchable()
+                ->preload()
+                ->required()
+                ->createOptionForm([
+                    TextInput::make('nom')
+                        ->label('Nom du prestataire')
+                        ->required(),
+                    TextInput::make('profession')
+                        ->label('Profession')
+                        ->required(),
+                    TextInput::make('phone')
+                        ->label('Téléphone')
+                        ->tel()
+                        ->required(),
+                    TextInput::make('adresse')
+                        ->label('Adresse')
+                        ->required(),
+                ])
+                ->createOptionUsing(function (array $data) {
+                    return Prestataire::create($data)->id;
+                })
+                ->createOptionAction(function ($action) {
+                    return $action
+                        ->modalHeading('Créer un nouveau prestataire')
+                        ->modalButton('Créer prestataire')
+                        ->modalWidth('lg');
+                }),
+
+            // Catégorie de Dépense
+            Select::make('categorie_depense_id')
+                ->label('Catégorie de Dépense')
+                ->relationship('categorie', 'categorie')
+                ->searchable()
+                ->preload()
+                ->required()
+                ->createOptionForm([
+                    TextInput::make('categorie')
+                        ->label('Catégorie')
+                        ->required(),
+                    TextInput::make('description')
+                        ->label('Description')
+                        ->required(),
+                ])
+                ->createOptionUsing(function (array $data) {
+                    return CategorieDepense::create($data)->id;
+                })
+                ->createOptionAction(function ($action) {
+                    return $action
+                        ->modalHeading('Créer un catégorie de dépense')
+                        ->modalButton('Créer type')
+                        ->modalWidth('md');
+                }),
+                
+            // Titre
+            TextInput::make('titre')
+                ->label('Titre')
+                ->required()
+                ->helperText('Entrez le titre de la dépense'),
+            
+            // Libellé
+            MarkdownEditor::make('libelle')
+                ->label('Libellé')
+                ->required(),
+
+            // Date de paiement
+            DatePicker::make('payment_date')
+                ->label('Date du paiement')
+                ->suffixIcon('heroicon-o-calendar-date-range')
+                ->native(false)
+                ->default(now())
+                ->required(),
+
+            // Montant
+            TextInput::make('amount')
+                ->label('Montant')
+                ->numeric()
+                ->minValue(0)
+                ->step(100)
+                ->required()
+                ->suffix('XOF')
+                ->helperText('Entrez le montant en F CFA'),
+
+            // Méthode de paiement
+            Select::make('payment_method')
+                ->label('Méthode de paiement')
+                ->searchable()
+                ->required()
+                ->options([
+                    'OM' => 'Orange Money',
+                    'Wave' => 'Wave',
+                    'Free Money' => 'Free Money',
+                    'Chèque' => 'Chèque',
+                    'Virement' => 'Virement',
+                    'Espèces' => 'Espèces',
+                ]),
+        ]);
+}
+
 
     public static function table(Table $table): Table
     {
         return $table
             ->columns([
-                Tables\Columns\TextColumn::make('property.name')
+                Tables\Columns\TextColumn::make('property.full_name')
                     ->label('Propriété')
                     ->searchable()
                     ->sortable(),
-                Tables\Columns\TextColumn::make('type')
-                    ->label('Type de dépense')
+                Tables\Columns\TextColumn::make('flat.type')
+                    ->label('Appartement')
+                    ->searchable()
+                    ->sortable(),  
+                Tables\Columns\TextColumn::make('prestataire.full_name')
+                    ->label('Prestataire')
+                    ->searchable()
+                    ->sortable(), 
+                Tables\Columns\TextColumn::make('categorie.categorie')
+                    ->label('Catégorie de dépense')
+                    ->searchable()
+                    ->sortable(),
+                Tables\Columns\TextColumn::make('titre')
+                    ->label('Titre')
                     ->searchable()
                     ->sortable(),
                 Tables\Columns\TextColumn::make('libelle')
@@ -133,7 +253,7 @@ class ExpenseResource extends Resource
                     ->sortable(),
                 Tables\Columns\TextColumn::make('amount')
                     ->label('Montant')
-                    ->money('XOF')
+                    ->suffix(' F CFA')            
                     ->sortable(),
                 Tables\Columns\TextColumn::make('payment_method')
                     ->label('Méthode de paiement')
@@ -151,10 +271,10 @@ class ExpenseResource extends Resource
                     ->toggleable(isToggledHiddenByDefault: true),
             ])
             ->filters([
-                //
             ])
             ->actions([
                 Tables\Actions\EditAction::make(),
+                Tables\Actions\DeleteAction::make(),
             ])
             ->bulkActions([
                 Tables\Actions\BulkActionGroup::make([
@@ -178,4 +298,16 @@ class ExpenseResource extends Resource
             'edit' => Pages\EditExpense::route('/{record}/edit'),
         ];
     }
+    
+    // Vous pouvez personnaliser les messages d'en-tête
+    public static function getModelLabel(): string
+    {
+        return 'Dépense';
+    }
+    
+    public static function getPluralModelLabel(): string
+    {
+        return 'Dépenses';
+    }
+    
 }

@@ -37,4 +37,9 @@ class Property extends Model
     {
         return $this->hasMany(Remittance::class, 'property_id');
     }
+
+    public function getFullNameAttribute()
+    {
+        return $this->type . ' - ' . $this->name;
+    }
 }

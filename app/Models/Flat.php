@@ -11,6 +11,7 @@ class Flat extends Model
 
     protected $fillable = [
         'property_id',
+        
         'tenant_id',
         'property_commission_value',
         'property_commission_unit',
@@ -28,5 +29,10 @@ class Flat extends Model
     public function tenant()
     {
         return $this->belongsTo(Tenant::class, 'tenant_id');
+    }
+    // expenses
+    public function expenses()
+    {
+        return $this->hasMany(Expense::class);
     }
 }
