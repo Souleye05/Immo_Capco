@@ -100,7 +100,10 @@ class UnsoldResource extends Resource
                     ->maxLength(65535),
                 Toggle::make('etat')
                     ->disabled(),
-                DatePicker::make('date'),
+                DatePicker::make('date')
+                    ->label('Date de l\'impayé')
+                    ->default(now())
+                    ->required(),
             ]);
     }
 

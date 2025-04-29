@@ -100,7 +100,9 @@ class PaymentResource extends Resource
                 ->monthSelect(),
 
                 DatePicker::make('date_payment')
-                    ->label('Date du paiement'),
+                    ->label('Date du paiement')
+                    ->required()
+                    ->default(now()),
                     
                 Select::make('payment_method')
                     ->label('Méthode de paiement')

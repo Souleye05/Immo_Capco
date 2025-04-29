@@ -11,7 +11,6 @@ class Flat extends Model
 
     protected $fillable = [
         'property_id',
-        
         'tenant_id',
         'property_commission_value',
         'property_commission_unit',

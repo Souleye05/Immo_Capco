@@ -7,6 +7,7 @@ use App\Filament\Resources\RemittanceResource\RelationManagers;
 use App\Models\Remittance;
 use Filament\Forms;
 use App\Models\Owner;
+use App\Models\Property;
 use Filament\Forms\Form;
 use Filament\Resources\Resource;
 use Filament\Forms\Components\DatePicker;
@@ -50,7 +51,7 @@ class RemittanceResource extends Resource
 
         Select::make('property_id')
             ->label('Propriété')
-            ->options(\App\Models\Property::all()->pluck('name', 'id'))
+            ->options(Property::all()->pluck('name', 'id'))
             ->required(),
     ])
     ->createOptionUsing(function (array $data) {
@@ -87,6 +88,7 @@ class RemittanceResource extends Resource
 
             DatePicker::make('remittance_date')
                 ->label('Date de versement')
+                ->default(now())
                 ->required(),
 
             Select::make('mode_remit')

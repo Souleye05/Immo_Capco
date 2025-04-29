@@ -40,7 +40,9 @@ class VersementRelationManager extends RelationManager
 
 
                 DatePicker::make('versement_date')
-                    ->label('Date du paiement'),
+                    ->label('Date du paiement')
+                    ->default(now())
+                    ->required(),
                 
             ]);
         
