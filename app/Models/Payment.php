@@ -39,4 +39,6 @@ class Payment extends Model
     {
         return $this->hasMany(Versement::class);
     }
+    
+    
 }

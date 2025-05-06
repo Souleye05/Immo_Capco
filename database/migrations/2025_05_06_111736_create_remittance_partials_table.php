@@ -11,16 +11,13 @@ return new class extends Migration
      */
     public function up(): void
     {
-        Schema::create('remittances', function (Blueprint $table) {
+        Schema::create('remittance_partials', function (Blueprint $table) {
             $table->id();
-            $table->foreignId('owner_id')->nullable()->nullOnDelete();
-            $table->foreignId('property_id')->nullable()->nullOnDelete();
-            $table->enum('status', ['Pending', 'Partial', 'Paid'])->default('Pending')->change();
+            $table->foreignId('remittance_id')->constrained()->cascadeOnDelete();
+            $table->string('reference')->nullable();
+            $table->decimal('amount', 15, 2);
             $table->enum('mode_remit', ['OM', 'Wave', 'Free Money', 'Chèque', 'Virement', 'Espèces'])->nullable();
             $table->string('current_month')->nullable();
-            $table->decimal('amount',15,0)->nullable();
-            $table->decimal('amount_to_transfer',15,0)->nullable();
-            $table->decimal('remaining',15,0)->nullable();
             $table->date('remittance_date')->nullable();
             $table->timestamps();
         });
@@ -31,6 +28,6 @@ return new class extends Migration
      */
     public function down(): void
     {
-        Schema::dropIfExists('remittances');
+        Schema::dropIfExists('remittance_partials');
     }
 };

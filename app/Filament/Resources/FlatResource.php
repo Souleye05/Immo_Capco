@@ -68,14 +68,7 @@ class FlatResource extends Resource
                     ->minValue(1),
             ])
             ->createOptionUsing(function (array $data) {
-                return Property::create([
-                    'type' => $data['type'],
-                    'name' => $data['name'],
-                    'address' => $data['address'],
-                    'commission_value' => $data['commission_value'],
-                    'commission_unit' => $data['commission_unit'],
-                    'number_flat' => $data['number_flat'],
-                ])->id;
+                return Property::create($data)->id;
             })
             ->createOptionAction(function ($action) {
                 return $action
@@ -123,11 +116,7 @@ class FlatResource extends Resource
                             ->required(),
                     ])
                     ->createOptionUsing(function (array $data) {
-                        return Tenant::create([
-                            'name' => $data['name'],
-                            'phone' => $data['phone'],
-                            'address' => $data['address'],
-                        ])->id;
+                        return Tenant::create($data)->id;
                     })
                     ->createOptionAction(function ($action) {
                         return $action

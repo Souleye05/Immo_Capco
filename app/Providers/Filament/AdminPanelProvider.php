@@ -49,6 +49,7 @@ class AdminPanelProvider extends PanelProvider
                 EtatDesFacturesChart::class,
                 RevenusChart::class,
                 RevenusVsDepensesChart::class,
+                
             ])
             ->middleware([
                 EncryptCookies::class,

@@ -3,6 +3,7 @@
 namespace App\Filament\Resources\PropertyResource\Pages;
 
 use App\Filament\Resources\PropertyResource;
+use App\Filament\Resources\PropertyResource\Widgets\PropertyPaymentStatsWidget;
 use Filament\Actions;
 use Filament\Resources\Pages\EditRecord;
 
@@ -16,4 +17,5 @@ class EditProperty extends EditRecord
             Actions\DeleteAction::make(),
         ];
     }
+
 }

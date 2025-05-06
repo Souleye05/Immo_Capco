@@ -29,11 +29,30 @@ class RemittanceRelationManager extends RelationManager
                 TextColumn::make('remittance_date')
                    ->label('Date de remise')
                    ->date('d/m/Y'),
+
                 TextColumn::make('amount')
                    ->label('Montant')
                    ->money('XOF'),
+
                 TextColumn::make('mode_remit')
-                   ->label('Mode de remise'),   
+                   ->label('Mode de remise'),  
+                   
+                   Tables\Columns\TextColumn::make('status')
+                   ->label('Statut')
+                   ->badge()
+                   ->color(fn (string $state): string => match ($state) {
+                       'Paid' => 'success',
+                       'Partial' => 'warning',
+                       'Pending' => 'danger',
+                       default => 'gray',
+                   })
+                   ->icon(fn (string $state): string => match ($state) {
+                       'Paid' => 'heroicon-o-check-circle',
+                       'Partial' => 'heroicon-o-clock',
+                       'Pending' => 'heroicon-o-x-circle',
+                       default => 'heroicon-o-question-mark-circle',
+                   })
+                   ->sortable(), 
             ])
             ->filters([
                 
