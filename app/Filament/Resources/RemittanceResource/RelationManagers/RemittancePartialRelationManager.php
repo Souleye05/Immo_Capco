@@ -7,6 +7,8 @@ use Filament\Forms\Form;
 use Filament\Resources\RelationManagers\RelationManager;
 use Filament\Tables;
 use Filament\Tables\Table;
+use Filament\Tables\Actions\Action;
+use Illuminate\Support\Facades\Storage;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\SoftDeletingScope;
 use Filament\Forms\Components\TextInput;
@@ -169,6 +171,13 @@ class RemittancePartialRelationManager extends RelationManager
                         // Mettre à jour le montant restant et le statut de la remittance
                         $this->updateRemittanceAfterChange($livewire);
                     }),
+                Tables\Actions\ViewAction::make('Télécharger quittance')
+                    ->icon('heroicon-o-document-text')
+                    ->label('Quittance')
+                    ->url(fn ($record) => $record->receipt_path ? Storage::url($record->receipt_path) : '#')
+                    ->openUrlInNewTab()
+                    ->visible(fn ($record) => !empty($record->receipt_path)),
+                
             ])
             ->bulkActions([
                 Tables\Actions\BulkActionGroup::make([

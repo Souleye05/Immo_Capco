@@ -123,9 +123,9 @@ public function calculateMonthlyExpensesForProperty(int $propertyId, int $month,
     public function getTopCategory()
     {
         return Expense::selectRaw('categorie_depense_id, SUM(amount) as total')
+        ->groupBy('categorie_depense_id')
+        ->orderByRaw('SUM(amount) DESC')
             ->with('categorie')
-            ->groupBy('categorie_depense_id')
-            ->orderByRaw('SUM(amount) DESC')
             ->first();
     }
     

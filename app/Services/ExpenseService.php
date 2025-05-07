@@ -61,9 +61,10 @@ class ExpenseService
     public function getTopCategoryInfo(): array
     {
         $topType = $this->expenseRepository->getTopCategory();
+
         return [
             'name' => $topType && isset($topType->categorie) ? $topType->categorie->categorie : 'Aucune donnée disponible',
-            'total' => (float) $topType->total,
+            'total' => $topType ? (float) $topType->total : 0, // Vérification si $topType est null
         ];
     } 
 

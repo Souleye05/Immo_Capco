@@ -81,7 +81,7 @@ class PropertyResource extends Resource
                     ->sortable(),
                 Tables\Columns\TextColumn::make('commission_value')
                     ->label('Commission')
-                    ->suffix(fn (Property $record) => ' ' . $record->commission_unit)
+                    ->suffix(fn (Property $record) => ' ' . $record->commission_unit)   
                     ->sortable(),
                 Tables\Columns\TextColumn::make('number_flat')
                     ->label("Nombre d'appartements")
@@ -108,7 +108,7 @@ class PropertyResource extends Resource
                 
                 // Nouvelle colonne pour les dépenses mensuelles
                 Tables\Columns\TextColumn::make('monthly_expenses')
-                    ->label('Dépenses (mois courant)')
+                    ->label('Dépenses ')
                     ->suffix(' F CFA')
                     ->state(function (Property $record): float {
                         $expenseRepository = app(\App\Repositories\ExpenseRepository::class);

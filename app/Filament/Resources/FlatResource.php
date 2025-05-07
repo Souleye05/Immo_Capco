@@ -176,17 +176,25 @@ class FlatResource extends Resource
                     ->sortable(),
                 Tables\Columns\TextColumn::make('loyer')
                     ->label('Montant du loyer')
-                    ->money('XOF')
+                    // ->money('XOF')
+                    ->suffix('F CFA')
+
                     ->sortable(),
                 Tables\Columns\TextColumn::make('caution')
                     ->label('Montant de la caution')
-                    ->money('XOF')
+                    // ->money('XOF')
+                    ->suffix('F CFA')
                     ->sortable(),
+                // Tables\Columns\TextColumn::make('property_commission_value')
+                //     ->label('Commission')
+                //     ->sortable(),
+                // Tables\Columns\TextColumn::make('property_commission_unit')
+                //     ->label('Unité')
+                //     ->sortable(),
+                // groupe les colonnes commission_value et property_commission_unit
                 Tables\Columns\TextColumn::make('property_commission_value')
                     ->label('Commission')
-                    ->sortable(),
-                Tables\Columns\TextColumn::make('property_commission_unit')
-                    ->label('Unité')
+                    ->suffix(fn (Flat $record) => ' ' . $record->property_commission_unit)
                     ->sortable(),
                 Tables\Columns\TextColumn::make('created_at')
                     ->label('Créé le')

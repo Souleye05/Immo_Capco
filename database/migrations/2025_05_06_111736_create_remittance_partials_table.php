@@ -17,6 +17,7 @@ return new class extends Migration
             $table->string('reference')->nullable();
             $table->decimal('amount', 15, 2);
             $table->enum('mode_remit', ['OM', 'Wave', 'Free Money', 'Chèque', 'Virement', 'Espèces'])->nullable();
+            $table->string('receipt_path')->nullable();
             $table->string('current_month')->nullable();
             $table->date('remittance_date')->nullable();
             $table->timestamps();

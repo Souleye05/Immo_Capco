@@ -38,7 +38,7 @@ class Remittance extends Model
         return $this->hasMany(RemittancePartial::class);
     }
     protected static function booted()
-    {
+    {  
         static::saving(function ($remittance) {
             $paymentService = app(PaymentService::class);
             $stats = $paymentService->getPropertyFinancialStats($remittance->property_id, now()->month, now()->year);

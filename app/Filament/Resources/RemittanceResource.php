@@ -5,6 +5,9 @@ namespace App\Filament\Resources;
 use App\Filament\Resources\RemittanceResource\Pages;
 use App\Filament\Resources\RemittanceResource\RelationManagers;
 use App\Models\Remittance;
+use Coolsam\FilamentFlatpickr\Forms\Components\Flatpickr;
+
+use Coolsam\FilamentFlatpickr\Enums\FlatpickrMonthSelectorType;
 use Filament\Forms;
 use App\Models\Owner;
 use App\Models\Property;
@@ -110,13 +113,15 @@ class RemittanceResource extends Resource
                                 'Partial' => 'Partiel',
                                 'Paid' => 'Complet',
                             ])
+                            
                             ->dehydrated(true)
                             ->disabled(),
 
-                        DatePicker::make('current_month')
+                        Flatpickr::make('current_month')
                             // ->hidden()
                             ->label('Mois concerné')
-                            ->default(now())
+                            ->monthSelect()
+                            // ->default(now())
                             ->required(),
                             
                             
@@ -140,17 +145,22 @@ class RemittanceResource extends Resource
                 Tables\Columns\TextColumn::make('owner.name')
                     ->label('Propriétaire')
                     ->searchable()
+                    ->alignCenter()
                     ->sortable(),
                 Tables\Columns\TextColumn::make('property_id')
                     ->label('Propriété ID')
+                    ->alignCenter()
                     ->sortable(),
                 Tables\Columns\TextColumn::make('amount_to_transfer')
                     ->label('Montant dû')
                     ->suffix(' FCFA')
+                    ->color('info')
                     ->sortable(),
                 Tables\Columns\TextColumn::make('amount')
                     ->label('Montant déjà versé')
                     ->suffix(' FCFA')
+                    ->color('success')
+                    ->alignCenter()
                     ->sortable(),
                     Tables\Columns\TextColumn::make('remaining')
                     ->label('Reste à verser')
@@ -159,7 +169,9 @@ class RemittanceResource extends Resource
                         $remaining = $record->amount_to_transfer - $alreadyPaid;
 
                         return number_format($remaining, 0, ',', ' ') . ' FCFA';
-                    }),
+                    })
+                    ->color('danger')
+                    ->sortable(),
                     Tables\Columns\TextColumn::make('status')
                     ->label('Statut')
                     ->badge()
@@ -175,10 +187,12 @@ class RemittanceResource extends Resource
                         'Pending' => 'heroicon-o-x-circle',
                         default => 'heroicon-o-question-mark-circle',
                     })
+                    ->default('Pending')
                     ->sortable(),
                 Tables\Columns\TextColumn::make('remittance_date')
                     ->label('Date de création du reversement')
                     ->date('d/m/Y')
+                    ->alignCenter()
                     ->sortable(),
 
                 Tables\Columns\TextColumn::make('current_month')
@@ -187,6 +201,7 @@ class RemittanceResource extends Resource
                     ->getStateUsing(function ($record) {
                         return now()->locale('fr')->monthName;
                     })
+                    ->alignCenter()
                     ->sortable(),
                     Tables\Columns\TextColumn::make('current_year')
                     ->label('Annee')
@@ -229,4 +244,5 @@ class RemittanceResource extends Resource
             // 'view' => Pages\ViewRemittance::route('/{record}'),
         ];
     }
+    
 }

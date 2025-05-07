@@ -9,4 +9,5 @@ use Filament\Resources\Pages\CreateRecord;
 class CreateRemittance extends CreateRecord
 {
     protected static string $resource = RemittanceResource::class;
+    
 }

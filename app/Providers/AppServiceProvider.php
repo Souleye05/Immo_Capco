@@ -6,6 +6,7 @@ use App\Repositories\ExpenseRepository;
 use App\Repositories\FlatRepository;
 use App\Repositories\PaymentRepository;
 use App\Services\ExpenseService;
+use App\Services\InvoiceService;
 use App\Services\PaymentService;
 use Illuminate\Support\ServiceProvider;
 
@@ -24,6 +25,7 @@ class AppServiceProvider extends ServiceProvider
     // Enregistrer les services
     $this->app->singleton(PaymentService::class, PaymentService::class);
     $this->app->singleton(ExpenseService::class, ExpenseService::class);
+    $this->app->singleton(InvoiceService::class, InvoiceService::class);
 }
 
     /**

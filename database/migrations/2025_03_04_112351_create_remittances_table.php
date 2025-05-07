@@ -15,7 +15,7 @@ return new class extends Migration
             $table->id();
             $table->foreignId('owner_id')->nullable()->nullOnDelete();
             $table->foreignId('property_id')->nullable()->nullOnDelete();
-            $table->enum('status', ['Pending', 'Partial', 'Paid'])->default('Pending')->change();
+            $table->enum('status', ['Pending', 'Partial', 'Paid'])->default('Pending');
             $table->enum('mode_remit', ['OM', 'Wave', 'Free Money', 'Chèque', 'Virement', 'Espèces'])->nullable();
             $table->string('current_month')->nullable();
             $table->decimal('amount',15,0)->nullable();
