@@ -27,11 +27,11 @@ return new class extends Migration
      */
     public function down()
 {
-    Schema::table('expenses', function (Blueprint $table) {
-        $table->dropForeign(['prestataire_id']); // supprimer la foreign key d'abord
-    });
+    // Schema::table('expenses', function (Blueprint $table) {
+    //     $table->dropForeign(['prestataire_id']); // supprimer la foreign key d'abord
+    // });
 
-    Schema::dropIfExists('prestataires');
+    // Schema::dropIfExists('prestataires');
 }
 
 };

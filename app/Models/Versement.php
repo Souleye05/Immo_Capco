@@ -13,6 +13,7 @@ class Versement extends Model
         'payment_id',
         'reference',
         'amount',
+        'payment_method',
         'current_month',
         'versement_date',
     ];

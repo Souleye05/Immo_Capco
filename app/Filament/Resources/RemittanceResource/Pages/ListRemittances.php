@@ -4,6 +4,7 @@ namespace App\Filament\Resources\RemittanceResource\Pages;
 
 use App\Filament\Resources\PropertyResource\Widgets\PropertyPaymentStatsWidget;
 use App\Filament\Resources\RemittanceResource;
+use App\Filament\Resources\RemittanceResource\Widgets\ReversementStatsWidget;
 use Filament\Actions;
 use Filament\Resources\Pages\ListRecords;
 
@@ -23,6 +24,7 @@ class ListRemittances extends ListRecords
     {
         return [
             PropertyPaymentStatsWidget::class,
+            ReversementStatsWidget::class,
         ];
     }
 }

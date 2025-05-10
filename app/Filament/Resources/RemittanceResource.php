@@ -77,7 +77,7 @@ class RemittanceResource extends Resource
                             }),
 
                         TextInput::make('property_id')
-                            ->label('ID de la propriété')
+                            ->label('Propriété')
                             ->disabled()
                             ->dehydrated(true)
                             ->required(),
@@ -147,8 +147,8 @@ class RemittanceResource extends Resource
                     ->searchable()
                     ->alignCenter()
                     ->sortable(),
-                Tables\Columns\TextColumn::make('property_id')
-                    ->label('Propriété ID')
+                Tables\Columns\TextColumn::make('property.name')
+                    ->label('Propriété')
                     ->alignCenter()
                     ->sortable(),
                 Tables\Columns\TextColumn::make('amount_to_transfer')
@@ -234,6 +234,8 @@ class RemittanceResource extends Resource
             RelationManagers\RemittancePartialRelationManager::class,
         ];
     }
+
+    
 
     public static function getPages(): array
     {

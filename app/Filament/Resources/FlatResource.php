@@ -4,6 +4,8 @@ namespace App\Filament\Resources;
 
 use App\Filament\Resources\FlatResource\Pages;
 use App\Filament\Resources\FlatResource\RelationManagers;
+use App\Filament\Resources\FlatResource\Widgets\FlatStatsWidget;
+// use App\Filament\Widgets\FlatStatsWidget;
 use App\Models\Flat;
 use Filament\Forms;
 use Filament\Forms\Form;
@@ -126,7 +128,11 @@ class FlatResource extends Resource
                     }),
 
                 TextInput::make('reference')
-                    ->label("Référence de l'appartement"),
+                    ->label("Référence de l'appartement")
+                    ->default('FLAT-' . random_int(100000, 999999))
+                    ->disabled()
+                    ->dehydrated(true)
+                    ->required(),
 
                 TextInput::make('loyer')
                     ->label('Montant du loyer')
@@ -161,27 +167,33 @@ class FlatResource extends Resource
                 Tables\Columns\TextColumn::make('reference')
                     ->label("Référence de l'appartement")
                     ->searchable()
+                    ->alignCenter()
                     ->sortable(),
                 Tables\Columns\TextColumn::make('property.name')
                     ->label('Propriété')
                     ->searchable()
+                    ->alignCenter()
                     ->sortable(),
                 Tables\Columns\TextColumn::make('type')
                     ->label('Type')
                     ->searchable()
+                    ->alignCenter()
                     ->sortable(),
                 Tables\Columns\TextColumn::make('tenant.name')
                     ->label('Locataire')
                     ->searchable()
+                    ->alignCenter()
                     ->sortable(),
                 Tables\Columns\TextColumn::make('loyer')
                     ->label('Montant du loyer')
+                    ->alignCenter()
                     // ->money('XOF')
                     ->suffix('F CFA')
 
                     ->sortable(),
                 Tables\Columns\TextColumn::make('caution')
                     ->label('Montant de la caution')
+                    ->alignCenter()
                     // ->money('XOF')
                     ->suffix('F CFA')
                     ->sortable(),
@@ -194,17 +206,23 @@ class FlatResource extends Resource
                 // groupe les colonnes commission_value et property_commission_unit
                 Tables\Columns\TextColumn::make('property_commission_value')
                     ->label('Commission')
+                    ->alignCenter()
+
                     ->suffix(fn (Flat $record) => ' ' . $record->property_commission_unit)
                     ->sortable(),
                 Tables\Columns\TextColumn::make('created_at')
                     ->label('Créé le')
                     ->dateTime('d/m/Y H:i')
                     ->sortable()
+                    ->alignCenter()
+
                     ->toggleable(isToggledHiddenByDefault: true),
                 Tables\Columns\TextColumn::make('updated_at')
                     ->label('Mis à jour le')
                     ->dateTime('d/m/Y H:i')
                     ->sortable()
+                    ->alignCenter()
+
                     ->toggleable(isToggledHiddenByDefault: true),
             ])
             ->filters([
@@ -226,6 +244,8 @@ class FlatResource extends Resource
             //
         ];
     }
+
+    
 
     public static function getPages(): array
     {

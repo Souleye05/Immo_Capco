@@ -42,11 +42,18 @@ class PrestataireResource extends Resource
             ->columns([
                 //
                 Tables\Columns\TextColumn::make('nom')
-                    ->searchable(),
-                Tables\Columns\TextColumn::make('profession'),
-                Tables\Columns\TextColumn::make('phone'),
+                    ->searchable()
+                    ->alignCenter(),
+                Tables\Columns\TextColumn::make('profession')
+                    ->searchable()
+                    ->alignCenter(),
+                Tables\Columns\TextColumn::make('phone')
+                    ->searchable()
+                    ->alignCenter(),
                 Tables\Columns\TextColumn::make('adresse')
-                    ->limit(50),
+                    ->searchable()
+                    ->limit(50)
+                    ->alignCenter(),
                 Tables\Columns\TextColumn::make('created_at')
                     ->dateTime('d/m/Y')
                     ->label('Créé le'),

@@ -2,12 +2,17 @@
 
 namespace App\Providers;
 
+use App\Models\Payment;
+use App\Models\Versement;
+use App\Observers\PaymentObserver;
+use App\Observers\VersementObserver;
 use App\Repositories\ExpenseRepository;
 use App\Repositories\FlatRepository;
 use App\Repositories\PaymentRepository;
 use App\Services\ExpenseService;
 use App\Services\InvoiceService;
 use App\Services\PaymentService;
+use Illuminate\Support\Facades\Log;
 use Illuminate\Support\ServiceProvider;
 
 class AppServiceProvider extends ServiceProvider
@@ -33,6 +38,12 @@ class AppServiceProvider extends ServiceProvider
      */
     public function boot(): void
     {
-        //
+        
+        
+       
+        // Enregistrement de l'observer pour le modèle Versement
+        Versement::observe(VersementObserver::class); // Décommenter si nécessaire
+        
+        // Log pour confirmer l'enregistrement de l'observer
     }
 }

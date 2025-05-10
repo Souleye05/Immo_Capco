@@ -17,6 +17,7 @@ return new class extends Migration
             $table->string('reference')->nullable();
             $table->decimal('amount',13,0)->nullable();
             // $table->date('current_month')->nullable();
+            $table->enum('payment_method', ['OM', 'Wave', 'Free Money', 'Chèque', 'Virement', 'Espèces'])->nullable();
             $table->date('versement_date')->nullable();
             $table->timestamps();
         });

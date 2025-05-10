@@ -2,6 +2,7 @@
 
 namespace App\Filament\Resources\ExpenseResource\Widgets;
 
+use App\Models\Property;
 use App\Services\ExpenseService;
 use App\Services\PaymentService;
 use Filament\Widgets\StatsOverviewWidget as BaseWidget;
@@ -25,8 +26,8 @@ class ExpenseStatsOverview extends BaseWidget
         return [
             $this->createTotalExpensesStat($expenseService->totalExpenses(), $paymentService),
             $this->createMonthlyExpensesStat($expenseService->calculateMonthlyExpenses($currentMonth, $currentYear), $paymentService),
-            $this->createTopPropertiesStat($expenseService->getTopNPropertiesWithMostExpenses()),
-            $this->createTopCategoryStat($expenseService->getTopCategoryInfo(), $paymentService),
+            // $this->createTopPropertiesStat($expenseService->getTopNPropertiesWithMostExpenses()),
+            // $this->createTopCategoryStat($expenseService->getTopCategoryInfo(), $paymentService),
         ];
     }
     
@@ -48,24 +49,24 @@ class ExpenseStatsOverview extends BaseWidget
             ->extraAttributes($this->getCardAttributes('success'));
     }
     
-    private function createTopPropertiesStat(string $topProperty): Stat
-    {
-        return Stat::make('Top propriétés coûteuses', 'Top 3')
-            ->description($topProperty)
-            ->icon('heroicon-o-building-office-2')
-            ->color('danger')
-            ->extraAttributes($this->getCardAttributes('danger'));
-    }
+    // private function createTopPropertiesStat(string $topProperty): Stat
+    // {
+    //     return Stat::make('Top propriétés coûteuses', 'Top 3')
+    //         ->description($topProperty)
+    //         ->icon('heroicon-o-building-office-2')
+    //         ->color('danger')
+    //         ->extraAttributes($this->getCardAttributes('danger'));
+    // }
     
-    private function createTopCategoryStat(array $topType, PaymentService $paymentService): Stat
-    {
-        // dd($topType['total']);
-        return Stat::make('Catégorie principale', $topType['name'])
-            ->description($paymentService->formatAmount((float)$topType['total']))
-            ->icon('heroicon-o-tag')
-            ->color('primary')
-            ->extraAttributes($this->getCardAttributes('primary'));
-    }
+    // private function createTopCategoryStat(array $topType, PaymentService $paymentService): Stat
+    // {
+    //     // dd($topType['total']);
+    //     return Stat::make('Catégorie principale', $topType['name'])
+    //         ->description($paymentService->formatAmount((float)$topType['total']))
+    //         ->icon('heroicon-o-tag')
+    //         ->color('primary')
+    //         ->extraAttributes($this->getCardAttributes('primary'));
+    // }
     
     private function getCardAttributes(string $color): array
     {
@@ -73,4 +74,18 @@ class ExpenseStatsOverview extends BaseWidget
             'class' => "bg-gradient-to-br from-{$color}-50 to-white dark:from-{$color}-900 dark:to-{$color}-800 border-t-4 border-{$color}-500 shadow-md rounded-lg",
         ];
     }
+
+    private function getTopNPropertiesWithMostExpenses(int $n): array
+    {
+        $properties = Property::with(['expenses' => function ($query) {
+            $query->select('property_id', 'amount');
+        }])->get();
+
+        $topProperties = $properties->sortByDesc(function ($property) {
+            return $property->expenses->sum('amount');
+        })->take($n)->pluck('name')->toArray();
+
+        return $topProperties;
+    }
+
 }

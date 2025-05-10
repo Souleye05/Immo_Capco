@@ -28,6 +28,9 @@ class FlatRepository
         return Flat::all();
     }
 
+    // Revenu du moi des appartements
+    
+
     /**
      * Récupère les appartements d'une propriété spécifique
      *
@@ -93,4 +96,18 @@ class FlatRepository
         
         return $totalCommissions;
     }
+
+    // Récupéré les les loyers pour chaque appartement
+    /**
+     * Récupère les loyers pour chaque appartement
+     *
+     * @return Collection
+     */
+    public function getRents(): Collection
+    {
+        return Flat::select('id', 'loyer')->get();
+    }
+   
+   
+    
 }

@@ -13,12 +13,17 @@ return new class extends Migration
     {
         Schema::create('unsolds', function (Blueprint $table) {
             $table->id();
+            $table->foreignId('payment_id')->nullable()->constrained()->nullOnDelete();
+            $table->boolean('is_archived')->default(false);
+            $table->string('month')->nullable(); // Exemple : "2024-05"
             $table->foreignId('tenant_id')->nullable()->nullOnDelete();
             $table->string('reference')->nullable();
             $table->decimal('amount',13,0)->nullable();
             $table->text('motif')->nullable();
-            $table->boolean('etat')->nullable();
+            $table->boolean('status')->nullable();
             $table->string('date')->nullable();
+            $table->softDeletes(); // Pour gérer la suppression douce
+            $table->timestamp('paid_at')->nullable();
             $table->timestamps();
         });
     }
@@ -28,6 +33,8 @@ return new class extends Migration
      */
     public function down(): void
     {
-        Schema::dropIfExists('unsolds');
+        Schema::table('unsolds', function (Blueprint $table) {
+            $table->dropSoftDeletes();
+        });
     }
 };

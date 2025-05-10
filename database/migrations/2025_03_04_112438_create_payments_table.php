@@ -20,7 +20,7 @@ return new class extends Migration
             $table->decimal('amount',13,0)->nullable();
             $table->boolean('status')->nullable();
             $table->date('date_payment')->nullable();
-            $table->enum('payment_method', ['OM', 'Wave', 'Free Money', 'Chèque', 'Virement', 'Espèces'])->nullable();
+            // $table->enum('payment_method', ['OM', 'Wave', 'Free Money', 'Chèque', 'Virement', 'Espèces'])->nullable();
             $table->timestamps();
         });
     }

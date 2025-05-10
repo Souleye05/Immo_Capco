@@ -23,7 +23,7 @@ class Property extends Model
         return $this->hasMany(Flat::class);
     }
 
-    public function expense()
+    public function expenses()
     {
         return $this->hasMany(Expense::class);
     }

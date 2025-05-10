@@ -3,6 +3,7 @@
 namespace App\Filament\Resources\FlatResource\Pages;
 
 use App\Filament\Resources\FlatResource;
+use App\Filament\Resources\FlatResource\Widgets\FlatStatsWidget;
 use Filament\Actions;
 use Filament\Resources\Pages\ListRecords;
 
@@ -14,6 +15,13 @@ class ListFlats extends ListRecords
     {
         return [
             Actions\CreateAction::make(),
+        ];
+    }
+
+    public  function getHeaderWidgets(): array
+    {
+        return [
+            FlatStatsWidget::class,
         ];
     }
 }

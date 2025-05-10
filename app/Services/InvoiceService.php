@@ -7,6 +7,7 @@ use Illuminate\Support\Facades\Storage;
 
 class InvoiceService
 {
+    
     public function generateAndStorePdf(string $view, array $data, string $fileName): string
     {
         $pdf = Pdf::loadView($view, $data);

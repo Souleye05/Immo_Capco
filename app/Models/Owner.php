@@ -24,4 +24,9 @@ class Owner extends Model
     {
         return $this->hasMany(Remittance::class);
     }
+
+    public function remittancePartials()
+{
+    return $this->hasMany(RemittancePartial::class);
+}
 }

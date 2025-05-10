@@ -28,7 +28,7 @@ class Remittance extends Model
         return $this->belongsTo(Owner::class, 'property_id');
     }
 
-    public function remit()
+    public function property()
     {
         return $this->belongsTo(Property::class, 'property_id');
     }

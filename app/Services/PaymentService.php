@@ -358,4 +358,30 @@ public function getPropertyFinancialStats(int $propertyId, int $month, int $year
     return $this->paymentRepository->getMonthlyPayments($month, $year, $flatId)->load('flat');
 }
 
+// calcul commission des loyers
+public function calculateTotalCommissionsFromRents(): float
+{
+    $totalCommissions = 0;
+
+    // Récupérer tous les appartements
+    $flats = $this->flatRepository->getAll();
+
+    foreach ($flats as $flat) {
+        $loyer = $flat->loyer; // Montant du loyer
+        $commissionValue = $flat->property_commission_value; // Valeur de la commission
+        $commissionUnit = $flat->property_commission_unit; // Unité de la commission (% ou F CFA)
+
+        // Calculer la commission en fonction de l'unité
+        if ($commissionUnit === '%') {
+            // Si la commission est en pourcentage
+            $totalCommissions += ($loyer * $commissionValue) / 100;
+        } elseif ($commissionUnit === 'F CFA') {
+            // Si la commission est une valeur fixe
+            $totalCommissions += $commissionValue;
+        }
+    }
+
+    return $totalCommissions;
+}
+
 }

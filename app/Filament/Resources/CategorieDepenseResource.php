@@ -40,11 +40,17 @@ class CategorieDepenseResource extends Resource
             ->columns([
                 Tables\Columns\TextColumn::make('categorie')
                 ->sortable()
+                ->alignCenter()
                 ->searchable(),
             Tables\Columns\TextColumn::make('description')
                 ->limit(50)
+                ->alignCenter()
                 ->toggleable(),
-                Tables\Columns\TextColumn::make('created_at')->dateTime('d/m/Y')->label('Créé le'),
+                Tables\Columns\TextColumn::make('created_at')
+                ->dateTime('d/m/Y')
+                ->sortable()
+                ->alignCenter()
+                ->label('Créé le'),
                 ])
             ->filters([
                 //

@@ -17,6 +17,8 @@ class PropertyPaymentStatsWidget extends BaseWidget
         [$month,$year] = $this->getCurrentMonthAndYear();
 
         // $payments = $paymentService->getMonthlyPayments($month, $year);
+        // reversement fait /total des reversements
+       
 
         $monthlyRevenue = $paymentService->calculateMonthlyRevenue($month, $year);   
         $monthlyCommissions = $paymentService->calculateMonthlyCommissions($month, $year);

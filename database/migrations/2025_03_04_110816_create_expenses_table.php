@@ -11,6 +11,9 @@ return new class extends Migration
      */
     public function up(): void
     {
+        if (!Schema::hasTable('expenses')) {
+            
+        
         Schema::create('expenses', function (Blueprint $table) {
             $table->id();
             $table->foreignId('property_id')->nullable()->cascadeOnDelete();
@@ -25,6 +28,7 @@ return new class extends Migration
             $table->enum('payment_method', ['OM', 'Wave', 'Free Money', 'Chèque', 'Virement', 'Espèces'])->nullable();
             $table->timestamps();
         });
+        }
     }
 
     /**

@@ -103,18 +103,6 @@ class PaymentResource extends Resource
                     ->label('Date du paiement')
                     ->required()
                     ->default(now()),
-                    
-                Select::make('payment_method')
-                    ->label('Méthode de paiement')
-                    ->searchable()
-                    ->options([
-                        'OM' => 'OM',
-                        'Wave' => 'Wave',
-                        'Free Money' => 'Free Money',
-                        'Chèque' => 'Chèque',
-                        'Virement' => 'Vrirement',
-                        'Espèces' => 'Espèces',
-                    ]),
 
                 Toggle::make('status')
                     ->label('Etat du paiement')
@@ -130,12 +118,14 @@ class PaymentResource extends Resource
             ->columns([
                 Tables\Columns\TextColumn::make('numero')
                     ->label('Numéro de facture')
+                    ->alignCenter()
                     ->searchable(),
 
                 // Modification pour faire un clic sur le nom du locataire pour afficher les détails
                 Tables\Columns\TextColumn::make('tenant.name')
                     ->label('Locataire')
                     ->searchable()
+                    ->alignCenter()
                     ->sortable()
                     ->toggleable()
                     ->weight(FontWeight::Bold)
@@ -158,21 +148,35 @@ class PaymentResource extends Resource
                 TextColumn::make('current_month')
                     ->label('Mois de'),
                     
-                TextColumn::make('date_payment')
-                    ->label('Date de paiement'),
+                // TextColumn::make('date_payment')
+                //     ->label('Date de paiement'),
                     
-                TextColumn::make('payment_method')
-                    ->label('Méthode de paiement'),
                     
                 TextColumn::make('amount')
-                    ->label('Montant')
-                    ->money('xof'),
+                    ->label('Montant dû')                
+                    ->formatStateUsing(fn ($state): string => number_format($state, 0, ',', ' ') . ' FCFA')
+                    ->alignCenter()
+                    ->sortable(),
+                TextColumn::make('amount_paid')
+                    ->label('Montant versé')
+                    
+                    ->formatStateUsing(fn ($state): string => number_format($state, 0, ',', ' ') . ' FCFA')
+                    ->alignCenter()
+                    ->sortable(),
+                TextColumn::make('amount_remaining')
+                    ->label('Montant restant')
+                    
+                    ->formatStateUsing(fn ($state): string => number_format($state, 0, ',', ' ') . ' FCFA')
+                    ->alignCenter()
+                    ->sortable(),
 
                 // Colonne statut dynamique
                 Tables\Columns\IconColumn::make('status')
                     ->label('Statut')
                     ->sortable()
+                    ->alignCenter()
                     ->boolean()
+                    
                     ->trueIcon('heroicon-o-check-circle')
                     ->falseIcon('heroicon-o-x-circle')
                     ->trueColor('success')
@@ -185,21 +189,22 @@ class PaymentResource extends Resource
             ->actions([
                 Tables\Actions\EditAction::make(),
                 
-                    // Bouton pour voir uniquement les détails du locataire
-                Tables\Actions\Action::make('viewTenantDetails')
-                    ->label('Détails locataire')
-                    ->icon('heroicon-o-user')
-                    ->color('info')
-                    ->modalHeading(fn (Payment $record): string => 'Détails du locataire: ' . $record->tenant->name)
-                    ->modalContent(function (Payment $record) {
-                            // Récupérer le locataire
-                        $tenant = Tenant::find($record->tenant_id);
+// Bouton explicite pour voir les détails du locataire
+Tables\Actions\Action::make('viewTenantDetails')
+    ->label('Détails locataire')
+    ->icon('heroicon-o-user')
+    ->color('info')
+    ->modalHeading(fn (Payment $record): string => 'Détails du locataire: ' . $record->tenant->name)
+    ->modalContent(function (Payment $record) {
+        // Récupérer le locataire avec la relation flat
+        $tenant = Tenant::with('flat')->find($record->tenant_id);
+        $flat = $tenant->flat ?? null;
         
-                        return view('filament.resources.payment-resource.tenant-details', [
-                            'tenant' => $tenant,
-                        ]);
-                    })
-    ->modalWidth('md'),
+        return view('filament.resources.payment-resource.tenant-details', [
+            'tenant' => $tenant,
+            'flat' => $flat,
+        ]);
+    })
             ])
             ->bulkActions([
                 Tables\Actions\BulkActionGroup::make([

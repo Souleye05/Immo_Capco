@@ -70,27 +70,32 @@ class PropertyResource extends Resource
                 Tables\Columns\TextColumn::make('type')
                     ->label('Type de propriété')
                     ->searchable()
+                    ->alignCenter() 
                     ->sortable(),
                 Tables\Columns\TextColumn::make('name')
                     ->label('Nom')
                     ->searchable()
+                    ->alignCenter()
                     ->sortable(),
                 Tables\Columns\TextColumn::make('address')
                     ->label('Adresse')
                     ->searchable()
+                    ->alignCenter()
                     ->sortable(),
                 Tables\Columns\TextColumn::make('commission_value')
                     ->label('Commission')
+                    ->alignCenter()
                     ->suffix(fn (Property $record) => ' ' . $record->commission_unit)   
                     ->sortable(),
                 Tables\Columns\TextColumn::make('number_flat')
                     ->label("Nombre d'appartements")
+                    ->alignCenter()
                     ->sortable(),
                     // Nouvelle colonne pour les commissions mensuelles
                 Tables\Columns\TextColumn::make('monthly_commissions')
                 ->label('Commissions')
-                // ->money('XOF')
-                ->suffix(' F CFA')
+                ->alignCenter()
+                ->formatStateUsing(fn (float $state): string => number_format($state, 0, ',', ' ') . ' F CFA')
                 ->state(function (Property $record): float {
                     $paymentService = app(PaymentService::class);
                     // Récupérer les valeurs du filtre ou utiliser les valeurs par défaut
@@ -109,7 +114,8 @@ class PropertyResource extends Resource
                 // Nouvelle colonne pour les dépenses mensuelles
                 Tables\Columns\TextColumn::make('monthly_expenses')
                     ->label('Dépenses ')
-                    ->suffix(' F CFA')
+                    ->alignCenter()
+                    ->formatStateUsing(fn (float $state): string => number_format($state, 0, ',', ' ') . ' F CFA')
                     ->state(function (Property $record): float {
                         $expenseRepository = app(\App\Repositories\ExpenseRepository::class);
                         // Récupérer les valeurs du filtre ou utiliser les valeurs par défaut
@@ -127,8 +133,9 @@ class PropertyResource extends Resource
                     ->sortable(),
                // Nouvelle colonne pour le montant à reverser
                Tables\Columns\TextColumn::make('amount_to_transfer')
-               ->label('Montant à reverser (mois courant)')
-               ->suffix(' F CFA')
+               ->label('Montant à reverser')
+               ->alignCenter()
+               ->formatStateUsing(fn (float $state): string => number_format($state, 0, ',', ' ') . ' F CFA')
                ->state(function (Property $record): float {
                    $paymentService = app(PaymentService::class);
                    // Récupérer les valeurs du filtre ou utiliser les valeurs par défaut
@@ -147,6 +154,7 @@ class PropertyResource extends Resource
                ->color(fn (float $state): string => $state > 0 ? 'success' : 'danger'),
                 Tables\Columns\TextColumn::make('created_at')
                     ->label('Créé le')
+                    ->alignCenter()
                     ->dateTime('d/m/Y H:i')
                     ->sortable()
                     ->toggleable(isToggledHiddenByDefault: true),
@@ -257,6 +265,7 @@ class PropertyResource extends Resource
     {
         return [
             //
+            RelationManagers\FlatRelationManager::class,
         ];
     }
 

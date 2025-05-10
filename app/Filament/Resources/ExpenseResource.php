@@ -220,49 +220,60 @@ class ExpenseResource extends Resource
                 Tables\Columns\TextColumn::make('property.full_name')
                     ->label('Propriété')
                     ->searchable()
+                    ->alignCenter()
                     ->sortable(),
                 Tables\Columns\TextColumn::make('flat.type')
                     ->label('Appartement')
                     ->searchable()
+                    ->alignCenter()
                     ->sortable(),  
                 Tables\Columns\TextColumn::make('prestataire.full_name')
                     ->label('Prestataire')
                     ->searchable()
+                    ->alignCenter()
                     ->sortable(), 
                 Tables\Columns\TextColumn::make('categorie.categorie')
                     ->label('Catégorie de dépense')
                     ->searchable()
+                    ->alignCenter()
                     ->sortable(),
                 Tables\Columns\TextColumn::make('titre')
                     ->label('Titre')
                     ->searchable()
+                    ->alignCenter()
                     ->sortable(),
                 Tables\Columns\TextColumn::make('libelle')
                     ->label('Libellé')
                     ->limit(50)
+                    ->alignCenter()
                     ->searchable()
                     ->sortable(),
                 Tables\Columns\TextColumn::make('payment_date')
                     ->label('Date du paiement')
                     ->date('d/m/Y')
+                    ->alignCenter()
                     ->sortable(),
                 Tables\Columns\TextColumn::make('amount')
                     ->label('Montant')
-                    ->suffix(' F CFA')            
+                    ->suffix(' F CFA')
+                    ->alignCenter()            
                     ->sortable(),
                 Tables\Columns\TextColumn::make('payment_method')
                     ->label('Méthode de paiement')
                     ->searchable()
+                    ->alignCenter()
                     ->sortable(),
                 Tables\Columns\TextColumn::make('created_at')
                     ->label('Créé le')
                     ->dateTime('d/m/Y H:i')
                     ->sortable()
+                    ->alignCenter()
                     ->toggleable(isToggledHiddenByDefault: true),
                 Tables\Columns\TextColumn::make('updated_at')
                     ->label('Mis à jour le')
                     ->dateTime('d/m/Y H:i')
                     ->sortable()
+                    ->alignCenter()
                     ->toggleable(isToggledHiddenByDefault: true),
             ])
             ->filters([

@@ -135,7 +135,10 @@ class OwnerResource extends Resource
     {
         return [
             //
-            RelationManagers\RemittanceRelationManager::class
+            RelationManagers\RemittanceRelationManager::class,
+            RelationManagers\PropertyRelationManager::class, // Affiche les propriétés
+            // RelationManagers\RemittancePartialRelationManager::class,
+             // Affiche les remittance partials
         ];
     }
 
