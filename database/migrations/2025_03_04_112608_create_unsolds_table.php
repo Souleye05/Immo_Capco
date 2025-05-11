@@ -14,9 +14,9 @@ return new class extends Migration
         Schema::create('unsolds', function (Blueprint $table) {
             $table->id();
             $table->foreignId('payment_id')->nullable()->constrained()->nullOnDelete();
+            $table->foreignId('tenant_id')->nullable()->nullOnDelete();
             $table->boolean('is_archived')->default(false);
             $table->string('month')->nullable(); // Exemple : "2024-05"
-            $table->foreignId('tenant_id')->nullable()->nullOnDelete();
             $table->string('reference')->nullable();
             $table->decimal('amount',13,0)->nullable();
             $table->text('motif')->nullable();
@@ -34,7 +34,10 @@ return new class extends Migration
     public function down(): void
     {
         Schema::table('unsolds', function (Blueprint $table) {
-            $table->dropSoftDeletes();
+            $table->dropForeign(['payment_id']);
+            $table->dropForeign(['tenant_id']);
         });
+
+        Schema::dropIfExists('unsolds');
     }
 };
