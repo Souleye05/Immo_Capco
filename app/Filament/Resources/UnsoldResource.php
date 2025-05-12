@@ -162,25 +162,21 @@ class UnsoldResource extends Resource
             ])
             ->filters([
                 //
-                Tables\Filters\TrashedFilter::make(),
+                // Tables\Filters\TrashedFilter::make(),
             ])
             ->actions([
                 Tables\Actions\EditAction::make(),
-                Tables\Actions\Action::make('restore')
-    ->label('Restaurer')
-    ->action(function ($record) {
-        $record->restore(); // Restaurer l'impayé
-        Notification::make()
-            ->success()
-            ->title('Restauré')
-            ->body('L\'impayé a été restauré avec succès.')
-            ->send();
+                Tables\Actions\DeleteAction::make()
+            ->action(function ($record) {
+                    $record->forceDelete(); // Suppression définitive
+                Notification::make()
+                        ->success()
+                        ->title('Supprimé')
+                        ->body('L\'impayé a été supprimé avec succès.')
+                        ->send();
     })
-    ->icon('heroicon-o-arrow-path')
-    ->requiresConfirmation()
-    ->visible(fn ($record) => $record->trashed()), // Afficher uniquement pour les impayés archivés
-                    
-            ])
+    ->requiresConfirmation(),
+    ])
             ->bulkActions([
                 Tables\Actions\BulkActionGroup::make([
                     Tables\Actions\DeleteBulkAction::make(),

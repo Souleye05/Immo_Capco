@@ -18,7 +18,7 @@ class VersementObserver
         if ($payment && $payment->isComplete()) {
             // Soft delete les impayés liés au locataire du paiement
             $payment->unsolds()->each(function ($unsold) {
-                $unsold->delete(); // soft delete
+                $unsold->forceDelete(); // soft delete
             });
 
             // (Optionnel) mettre à jour le statut du paiement comme complet (1)

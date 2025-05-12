@@ -4,12 +4,12 @@ namespace App\Models;
 
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
-use Illuminate\Database\Eloquent\SoftDeletes;
+// use Illuminate\Database\Eloquent\SoftDeletes;
 
 class Unsold extends Model
 {
     use HasFactory;
-    use SoftDeletes;
+    // use SoftDeletes;
 
     protected $fillable = [
         'payment_id',
@@ -27,7 +27,7 @@ class Unsold extends Model
     protected $dates = [
         'due_date',
         'paid_at',
-        'deleted_at', // Important pour SoftDeletes
+        // 'deleted_at', // Important pour SoftDeletes
     ];
 
     public function tenant()

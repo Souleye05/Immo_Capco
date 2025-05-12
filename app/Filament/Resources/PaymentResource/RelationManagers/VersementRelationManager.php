@@ -181,7 +181,7 @@ class VersementRelationManager extends RelationManager
                         if ($totalVersements >= $payment->amount) {
                             // Récupérer les impayés avant de les supprimer
                             $unsolds = Unsold::where('tenant_id', $payment->tenant_id)
-                                ->withTrashed(false)  // Seulement les non-supprimés
+                                // ->withTrashed(false)  // Seulement les non-supprimés
                                 ->get();
                             
                             // Si des impayés existent, les stocker et afficher une notification
