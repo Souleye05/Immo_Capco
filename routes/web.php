@@ -2,11 +2,10 @@
 
 use Illuminate\Support\Facades\Route;
 
-Route::get('/', function () {
-    return view('/welcomle');
-});
+// Route::get('/', function () {
+//     return view('/welcome');
+// });
 
-Route::get('/admin', function () {
-    return redirect('admin');
-});
+Route::redirect('/', '/admin/login');
+
 
