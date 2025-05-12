@@ -22,7 +22,7 @@ return new class extends Migration
             $table->text('motif')->nullable();
             $table->boolean('status')->nullable();
             $table->string('date')->nullable();
-            $table->softDeletes(); // Pour gérer la suppression douce
+            // $table->softDeletes(); // Pour gérer la suppression douce
             $table->timestamp('paid_at')->nullable();
             $table->timestamps();
         });
@@ -33,8 +33,9 @@ return new class extends Migration
      */
     public function down(): void
     {
-        Schema::table('unsolds', function (Blueprint $table) {
-            $table->dropSoftDeletes();
-        });
+        // Schema::table('unsolds', function (Blueprint $table) {
+        //     $table->dropSoftDeletes();
+        // });
+        Schema::dropIfExists('unsolds');
     }
 };
