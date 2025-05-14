@@ -1,3 +1,7 @@
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
+
+.fi-simple-main-ctn {
+    @apply bg-danger;
+}

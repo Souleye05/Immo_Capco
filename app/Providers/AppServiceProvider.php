@@ -12,6 +12,8 @@ use App\Repositories\PaymentRepository;
 use App\Services\ExpenseService;
 use App\Services\InvoiceService;
 use App\Services\PaymentService;
+use Filament\Facades\Filament;
+use Illuminate\Support\Facades\Blade;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\ServiceProvider;
 
@@ -39,11 +41,15 @@ class AppServiceProvider extends ServiceProvider
     public function boot(): void
     {
         
-        
-       
         // Enregistrement de l'observer pour le modèle Versement
         Versement::observe(VersementObserver::class); // Décommenter si nécessaire
-        
-        // Log pour confirmer l'enregistrement de l'observer
+
+Filament::registerRenderHook(
+    'panels::auth.login.form.after',
+    fn(): string => view('partials.login-style')->render(),
+);
+;  
+
+       
     }
 }
