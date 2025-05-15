@@ -15,7 +15,7 @@ return new class extends Migration
             $table->id();
             $table->string('name');
             $table->string('address');
-            $table->enum('type', ['Immeuble', 'Villa', 'Bureau']);
+            $table->enum('type', ['Immeuble', 'Villa', 'Commerce']);
             $table->integer('number_flat');
             $table->decimal('commission_value',13,0)->nullable();
             $table->enum('commission_unit', ['%', 'F CFA']);

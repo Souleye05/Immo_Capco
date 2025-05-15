@@ -19,7 +19,7 @@ class PropertyFactory extends Factory
         return [
             'name' => $this->faker->company(),
             'address' => $this->faker->address(),
-            'type' => $this->faker->randomElement(['Immeuble', 'Villa', 'Bureau']),
+            'type' => $this->faker->randomElement(['Immeuble', 'Villa', 'Commerce']),
             'number_flat' => $this->faker->numberBetween(1, 50),
             'commission_value' => $this->faker->randomFloat(0, 1000, 100000), // Montant entre 1 000 et 100 000
             'commission_unit' => $this->faker->randomElement(['%', 'F CFA']),

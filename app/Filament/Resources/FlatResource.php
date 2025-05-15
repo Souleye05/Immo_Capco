@@ -45,7 +45,7 @@ class FlatResource extends Resource
                     ->options([
                         'Immeuble' => 'Immeuble',
                         'Villa' => 'Villa',
-                        'Bureau' => 'Bureau'
+                        'Commerce' => 'Commerce'
                     ])
                     ->required(),
                 TextInput::make('name')
