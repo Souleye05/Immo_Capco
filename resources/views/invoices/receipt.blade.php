@@ -287,10 +287,6 @@
                         <span class="info-label">Mode de versement</span>
                         <span class="info-value">{{ ucfirst($partial->mode_remit) }}</span>
                     </div>
-                    <div class="info-item">
-                        <span class="info-label">Statut</span>
-                        <span class="status status-success">{{ ucfirst($partial->remittance->status) }}</span>
-                    </div>
                 </div>
             </div>
             
@@ -316,16 +312,8 @@
                         <span class="amount-value">{{ number_format($partial->remittance->amount_to_transfer, 0, ',', ' ') }} FCFA</span>
                     </div>
                     <div class="amount-row">
-                        <span class="amount-label">Montant déjà versé</span>
-                        <span class="amount-value">{{ number_format($partial->remittance->remaining, 0, ',', ' ') }} FCFA</span>
-                    </div>
-                    <div class="amount-row">
                         <span class="amount-label">Montant du versement actuel</span>
                         <span class="amount-value highlight">{{ number_format($partial->amount, 0, ',', ' ') }} FCFA</span>
-                    </div>
-                    <div class="total-row">
-                        <span class="total-label">Reste à verser</span>
-                        <span class="total-value">{{ number_format($partial->remittance->amount, 0, ',', ' ') }} FCFA</span>
                     </div>
                 </div>
             </div>

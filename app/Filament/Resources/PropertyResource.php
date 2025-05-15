@@ -59,6 +59,7 @@ class PropertyResource extends Resource
                 TextInput::make('number_flat')
                     ->label("Nombre d'appartement dans la propriété")
                     ->numeric()
+                    ->required()
                     ->minValue(1),
             ]);
     }
