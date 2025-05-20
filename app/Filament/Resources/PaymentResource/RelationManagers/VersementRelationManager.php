@@ -208,14 +208,7 @@ class VersementRelationManager extends RelationManager
                                     $unsold->delete();
                                 }
                                 
-                                // Stocker les détails des impayés réglés dans une table de logs ou d'historique
-                                DB::table('unsold_payments_history')->insert([
-                                    'tenant_id' => $payment->tenant_id,
-                                    'payment_id' => $payment->id,
-                                    'total_amount' => $totalUnsold,
-                                    'details' => json_encode($unsoldDetails),
-                                    'cleared_at' => now(),
-                                ]);
+                            
                                 
                                 // Notification pour les impayés réglés
                                 Notification::make()

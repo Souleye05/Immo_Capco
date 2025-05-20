@@ -13,6 +13,7 @@ use App\Services\ExpenseService;
 use App\Services\InvoiceService;
 use App\Services\PaymentService;
 use Filament\Facades\Filament;
+use Illuminate\Console\Scheduling\Schedule;
 use Illuminate\Support\Facades\Blade;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\ServiceProvider;
@@ -29,6 +30,7 @@ class AppServiceProvider extends ServiceProvider
     $this->app->singleton(PaymentRepository::class, PaymentRepository::class);
     $this->app->singleton(ExpenseRepository::class, ExpenseRepository::class);
 
+
     // Enregistrer les services
     $this->app->singleton(PaymentService::class, PaymentService::class);
     $this->app->singleton(ExpenseService::class, ExpenseService::class);
@@ -40,16 +42,17 @@ class AppServiceProvider extends ServiceProvider
      */
     public function boot(): void
     {
-        
+        $this->callAfterResolving(Schedule::class, function (Schedule $schedule) {
+            // Définissez vos tâches planifiées ici
+            $schedule->command('invoices:generate-monthly')->monthlyOn(1, '00:00'); // 1er du mois à 00:00
+        });
         // Enregistrement de l'observer pour le modèle Versement
         Versement::observe(VersementObserver::class); // Décommenter si nécessaire
 
-Filament::registerRenderHook(
-    'panels::auth.login.form.after',
-    fn(): string => view('partials.login-style')->render(),
-);
-;  
-
+       Filament::registerRenderHook(
+        'panels::auth.login.form.after',
+        fn(): string => view('partials.login-style')->render(),
+        );
        
     }
 }

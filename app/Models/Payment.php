@@ -18,7 +18,7 @@ class Payment extends Model
         'amount',
         'status',
         'date_payment',
-        'payment_method',
+        // 'payment_method',
     ];
 // Définir une méthode pour vérifier si la facture est complète
 public function isComplete(): bool

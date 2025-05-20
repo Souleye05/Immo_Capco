@@ -30,22 +30,14 @@ protected static function booted()
 
         $fileName = 'quittance_remittance_' . $partial->id . '.pdf';
 
-        // Récupérer tous les versements partiels liés au même remittance
-        $partials = self::where('remittance_id', $partial->remittance_id)->get();
-
         $path = $service->generateAndStorePdf(
             'invoices.receipt',
-            [
-                'partial' => $partial, // le dernier ajouté
-                'partials' => $partials, // tous les versements liés
-                'remittance' => $partial->remittance, // pour les données globales si besoin
-            ],
+            ['partial' => $partial],
             $fileName
         );
 
         $partial->update(['receipt_path' => $path]);
     });
 }
-
 
 }

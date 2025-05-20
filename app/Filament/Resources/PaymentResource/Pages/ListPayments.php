@@ -5,12 +5,15 @@ namespace App\Filament\Resources\PaymentResource\Pages;
 use App\Filament\Resources\PaymentResource;
 use App\Filament\Resources\PaymentResource\Widgets\PaymentStatsOverview;
 use App\Models\Payment;
+use App\Models\Tenant;
 use Filament\Actions;
 
 use Filament\Resources\Pages\ListRecords;
 use Filament\Pages\Actions\Action;
 use Coolsam\FilamentFlatpickr\Forms\Components\Flatpickr;
 use Filament\Notifications\Notification;
+use Illuminate\Support\Carbon;
+use Illuminate\Support\Facades\Artisan;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Schema;
 
@@ -99,9 +102,33 @@ class ListPayments extends ListRecords
     {
         return [
             Actions\CreateAction::make(),
+            Action::make('generateMonthlyInvoices')
+    ->label('Générer les factures du mois')
+    ->icon('heroicon-o-document-text')
+    ->color('success')
+    ->action(function () {
+        $output = Artisan::call('invoices:generate-monthly');
+        $exitCode = Artisan::output();
+
+        if (str_contains($exitCode, 'Aucune nouvelle facture')) {
+            Notification::make()
+                ->title('Déjà générées')
+                ->body('Les factures de ce mois existent déjà.')
+                ->warning()
+                ->send();
+        } else {
+            Notification::make()
+                ->title('Factures générées')
+                ->body('Les factures du mois ont été créées avec succès.')
+                ->success()
+                ->send();
+        }
+
+        $this->dispatch('refresh');
+    }),
         ];
-    }  
-    
+    }
+
     protected function getHeaderWidgets(): array
     {
         return [

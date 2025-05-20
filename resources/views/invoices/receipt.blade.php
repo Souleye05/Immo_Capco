@@ -357,6 +357,7 @@
             <p>Pour toute question concernant cette quittance, veuillez contacter notre service client.</p>
             <!-- <div class="qr-code">
                 <img src="/api/placeholder/100/100" alt="QR Code de vérification">
+                
             </div> -->
         </div>
     </div>
