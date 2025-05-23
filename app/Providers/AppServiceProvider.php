@@ -9,6 +9,7 @@ use App\Observers\VersementObserver;
 use App\Repositories\ExpenseRepository;
 use App\Repositories\FlatRepository;
 use App\Repositories\PaymentRepository;
+use App\Services\DocumentGeneratorService;
 use App\Services\ExpenseService;
 use App\Services\InvoiceService;
 use App\Services\PaymentService;
@@ -29,6 +30,7 @@ class AppServiceProvider extends ServiceProvider
     $this->app->singleton(FlatRepository::class, FlatRepository::class);
     $this->app->singleton(PaymentRepository::class, PaymentRepository::class);
     $this->app->singleton(ExpenseRepository::class, ExpenseRepository::class);
+    $this->app->singleton(DocumentGeneratorService::class, DocumentGeneratorService::class);
 
 
     // Enregistrer les services

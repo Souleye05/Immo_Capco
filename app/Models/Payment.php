@@ -25,7 +25,10 @@ public function isComplete(): bool
 {
     return $this->amount_paid >= $this->amount;
 }
-
+public function getIsFullyPaidAttribute(): bool
+{
+    return $this->amount_paid >= $this->amount;
+}
 
     public function tenant()
     {

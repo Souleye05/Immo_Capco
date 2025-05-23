@@ -182,29 +182,61 @@ class PaymentResource extends Resource
                     ->trueColor('success')
                     ->falseColor('danger')
                     ->toggleable(),
+
+                //  Tables\Columns\ViewColumn::make('actions')
+                // ->view('filament.tables.columns.payment-actions')
+                // ->label('Actions'),
             ])
             ->filters([
                 //
             ])
             ->actions([
-                Tables\Actions\EditAction::make(),
-                
-// Bouton explicite pour voir les détails du locataire
-Tables\Actions\Action::make('viewTenantDetails')
-    ->label('Détails locataire')
-    ->icon('heroicon-o-user')
-    ->color('info')
-    ->modalHeading(fn (Payment $record): string => 'Détails du locataire: ' . $record->tenant->name)
-    ->modalContent(function (Payment $record) {
-        // Récupérer le locataire avec la relation flat
-        $tenant = Tenant::with('flat')->find($record->tenant_id);
-        $flat = $tenant->flat ?? null;
-        
-        return view('filament.resources.payment-resource.tenant-details', [
-            'tenant' => $tenant,
-            'flat' => $flat,
-        ]);
-    })
+                // Action pour télécharger la quittance si paiement complet
+                // Tables\Actions\Action::make('download_quittance')
+                //     ->label('Quittance')
+                //     ->icon('heroicon-o-folder-arrow-down')
+                //     ->color('success')
+                //     ->visible(fn (Payment $record): bool => $record->is_fully_paid)
+                //     ->action(function (Payment $record) {
+                //         return response()->redirectToRoute('payments.download-quittance', $record);
+                //     }),
+                Tables\Actions\Action::make('download_quittance')
+                    ->label('Quittance')
+                    ->icon('heroicon-o-document-check')
+                    ->color('success')
+                    ->visible(function (Payment $record): bool {
+                        // Visible seulement si le paiement est complet
+                        return $record->is_fully_paid;
+                    })
+                    ->action(function (Payment $record) {
+                        return response()->redirectToRoute('documents.download-quittance', $record);
+                    })
+                    ->tooltip(function (Payment $record): string {
+                        $versementsCount = $record->versement()->count();
+                        
+                        if ($versementsCount <= 1) {
+                            return 'Télécharger la quittance simple';
+                        }
+                        
+                        return "Télécharger la quittance détaillée ({$versementsCount} versements)";
+                    }),
+                Tables\Actions\EditAction::make(),               
+            // Bouton explicite pour voir les détails du locataire
+                Tables\Actions\Action::make('viewTenantDetails')
+                    ->label('Détails locataire')
+                    ->icon('heroicon-o-user')
+                    ->color('info')
+                    ->modalHeading(fn (Payment $record): string => 'Détails du locataire: ' . $record->tenant->name)
+                    ->modalContent(function (Payment $record) {
+                        // Récupérer le locataire avec la relation flat
+                        $tenant = Tenant::with('flat')->find($record->tenant_id);
+                        $flat = $tenant->flat ?? null;
+                        
+                        return view('filament.resources.payment-resource.tenant-details', [
+                            'tenant' => $tenant,
+                            'flat' => $flat,
+                        ]);
+                    })
             ])
             ->bulkActions([
                 Tables\Actions\BulkActionGroup::make([
