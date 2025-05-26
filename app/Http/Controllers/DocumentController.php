@@ -91,7 +91,7 @@ class DocumentController extends Controller
     {
         return response($pdf, 200, [
             'Content-Type' => 'application/pdf',
-            'Content-Disposition' => 'attachment; filename="' . $filename . '"',
+            'Content-Disposition' => 'inline; filename="' . $filename . '"',
             'Cache-Control' => 'no-cache, no-store, must-revalidate',
             'Pragma' => 'no-cache',
             'Expires' => '0'

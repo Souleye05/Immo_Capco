@@ -97,8 +97,8 @@ class VersementRelationManager extends RelationManager
                     ->label('Reçu')
                     ->icon('heroicon-o-document-arrow-down')
                     ->color('info')
-                    ->action(fn (Versement $record) => 
-                        response()->redirectToRoute('documents.download-recu', $record)),
+                    ->url(fn (Versement $record) => route('documents.download-recu', $record))
+                    ->openUrlInNewTab(),
 
                 Tables\Actions\EditAction::make(),
                 

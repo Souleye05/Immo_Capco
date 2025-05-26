@@ -191,35 +191,41 @@ class PaymentResource extends Resource
                 //
             ])
             ->actions([
-                // Action pour télécharger la quittance si paiement complet
                 // Tables\Actions\Action::make('download_quittance')
                 //     ->label('Quittance')
-                //     ->icon('heroicon-o-folder-arrow-down')
+                //     ->icon('heroicon-o-document-check')
                 //     ->color('success')
-                //     ->visible(fn (Payment $record): bool => $record->is_fully_paid)
+                //     ->visible(function (Payment $record): bool {
+                //         // Visible seulement si le paiement est complet
+                //         return $record->is_fully_paid;
+                //     })
                 //     ->action(function (Payment $record) {
-                //         return response()->redirectToRoute('payments.download-quittance', $record);
+                //         return response()->redirectToRoute('documents.download-quittance', $record);
+                //     })
+                //     ->tooltip(function (Payment $record): string {
+                //         $versementsCount = $record->versement()->count();
+                        
+                //         if ($versementsCount <= 1) {
+                //             return 'Télécharger la quittance simple';
+                //         }
+                        
+                //         return "Télécharger la quittance détaillée ({$versementsCount} versements)";
                 //     }),
                 Tables\Actions\Action::make('download_quittance')
                     ->label('Quittance')
                     ->icon('heroicon-o-document-check')
                     ->color('success')
-                    ->visible(function (Payment $record): bool {
-                        // Visible seulement si le paiement est complet
-                        return $record->is_fully_paid;
-                    })
-                    ->action(function (Payment $record) {
-                        return response()->redirectToRoute('documents.download-quittance', $record);
-                    })
+                    ->visible(fn (Payment $record): bool => $record->is_fully_paid)
+                    ->url(fn (Payment $record) => route('documents.download-quittance', $record))
+                    ->openUrlInNewTab()
                     ->tooltip(function (Payment $record): string {
                         $versementsCount = $record->versement()->count();
                         
-                        if ($versementsCount <= 1) {
-                            return 'Télécharger la quittance simple';
-                        }
-                        
-                        return "Télécharger la quittance détaillée ({$versementsCount} versements)";
-                    }),
+                        return $versementsCount <= 1
+                            ? 'Télécharger la quittance simple'
+                            : "Télécharger la quittance détaillée ({$versementsCount} versements)";
+    }),
+
                 Tables\Actions\EditAction::make(),               
             // Bouton explicite pour voir les détails du locataire
                 Tables\Actions\Action::make('viewTenantDetails')
