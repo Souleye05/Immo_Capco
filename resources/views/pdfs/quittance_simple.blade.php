@@ -248,7 +248,7 @@
             
             <div class="amount-row">
                 <span class="amount-label">Méthode de paiement :</span>
-                <span class="amount-value">{{ $payment->payment_method ?? 'Non spécifiée' }}</span>
+                <span class="amount-value">{{ $versement->payment_method ?? 'Non spécifiée' }}</span>
             </div>
             
             <div class="amount-row">
