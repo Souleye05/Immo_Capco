@@ -11,8 +11,10 @@ use App\Repositories\FlatRepository;
 use App\Repositories\PaymentRepository;
 use App\Services\DocumentGeneratorService;
 use App\Services\ExpenseService;
+use App\Services\FactureService;
 use App\Services\InvoiceService;
 use App\Services\PaymentService;
+use App\Services\VersementService;
 use Filament\Facades\Filament;
 use Illuminate\Console\Scheduling\Schedule;
 use Illuminate\Support\Facades\Blade;
@@ -37,6 +39,8 @@ class AppServiceProvider extends ServiceProvider
     $this->app->singleton(PaymentService::class, PaymentService::class);
     $this->app->singleton(ExpenseService::class, ExpenseService::class);
     $this->app->singleton(InvoiceService::class, InvoiceService::class);
+    $this->app->singleton(VersementService::class, VersementService::class);
+    $this->app->singleton(FactureService::class, FactureService::class);
 }
 
     /**

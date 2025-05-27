@@ -2,6 +2,7 @@
 
 namespace App\Models;
 
+use App\Enums\PaymentType;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Support\Facades\Log;
@@ -14,11 +15,15 @@ class Payment extends Model
         'flat_id',
         'tenant_id',
         'numero',
+        'type',
         'current_month',
         'amount',
         'status',
         'date_payment',
-        // 'payment_method',
+    ];
+
+    protected $casts = [
+        'type' => PaymentType::class,       
     ];
 // Définir une méthode pour vérifier si la facture est complète
 public function isComplete(): bool
@@ -59,5 +64,50 @@ public function getIsFullyPaidAttribute(): bool
     public function getAmountRemainingAttribute(): float
     {
         return max(0, $this->amount - $this->amount_paid); // Montant dû - Montant versé
+    }
+    public function getTypeLabel(): string
+    {
+        return $this->type->getLabel();
+    }
+
+    public function getTypeBadgeColor(): string
+    {
+        return match($this->type) {
+            PaymentType::LOYER => 'success',
+            PaymentType::CAUTION => 'warning',
+            PaymentType::COMMISSION => 'info',
+        };
+    }
+
+    public function getDisplayLabel(): string
+    {
+        $label = $this->type->getLabel();
+        
+        if ($this->type === PaymentType::LOYER && $this->current_month) {
+            $label .= " - {$this->current_month}";
+        }
+        
+        return $label;
+    }
+
+    // Scopes
+    public function scopeOfType($query, PaymentType $type)
+    {
+        return $query->where('type', $type);
+    }
+
+    public function scopePaid($query)
+    {
+        return $query->where('status', true);
+    }
+
+    public function scopeUnpaid($query)
+    {
+        return $query->where('status', false);
+    }
+
+    public function scopeForTenantAndFlat($query, int $tenantId, int $flatId)
+    {
+        return $query->where('tenant_id', $tenantId)->where('flat_id', $flatId);
     }
 }
