@@ -101,14 +101,17 @@ class ListPayments extends ListRecords
     protected function getHeaderActions(): array
     {
         return [
-            Actions\CreateAction::make(),
-            Action::make('generateMonthlyInvoices')
-    ->label('Générer les factures du mois')
-    ->icon('heroicon-o-document-text')
-    ->color('success')
-    ->action(function () {
-        $output = Artisan::call('invoices:generate-monthly');
-        $exitCode = Artisan::output();
+            Actions\CreateAction::make()
+                ->label('Nouvelle facture')
+                ->icon('heroicon-o-plus')
+                ->color('info'),
+            Actions\Action::make('generateMonthlyInvoices')
+                ->label('Générer les factures du mois')
+                ->icon('heroicon-o-document-text')
+                ->color('success')
+                ->action(function () {
+                    $output = Artisan::call('invoices:generate-monthly');
+                    $exitCode = Artisan::output();
 
         if (str_contains($exitCode, 'Aucune nouvelle facture')) {
             Notification::make()
@@ -136,5 +139,15 @@ class ListPayments extends ListRecords
             PaymentStatsOverview::class,
 
         ];
+    }
+    
+    public function getTitle(): string
+    {
+        return 'Gestion des Factures';
+    }
+
+    public function getSubheading(): string
+    {
+        return 'Gérez vos factures et leurs Types';
     }
 }

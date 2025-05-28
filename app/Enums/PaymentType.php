@@ -42,8 +42,17 @@ enum PaymentType: string
             self::COMMISSION => 'Commission sur la gestion du bien',
         };
     }
-public function requiresMonth(): bool
+    public function requiresMonth(): bool
     {
-        return $this === self::LOYER;
+        return $this === self::LOYER || $this === self::COMMISSION;
+    }
+
+    public function getMonthLabel(): string
+    {
+        return match($this) {
+            self::LOYER => 'Mois du loyer',
+            self::COMMISSION => 'Mois de la commission',
+            self::CAUTION => 'Mois', // Non utilisé
+        };
     }
 }

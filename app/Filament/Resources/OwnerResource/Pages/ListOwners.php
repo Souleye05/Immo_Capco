@@ -13,7 +13,14 @@ class ListOwners extends ListRecords
     protected function getHeaderActions(): array
     {
         return [
-            Actions\CreateAction::make(),
+            Actions\CreateAction::make()
+                ->label('Nouveau propriétaire')
+                ->icon('heroicon-o-plus')
+                ->color('info'),
         ];
+    }
+    public function getTitle(): string
+    {
+        return 'Gestion des Propriétaires';
     }
 }

@@ -15,7 +15,10 @@ class ListRemittances extends ListRecords
     protected function getHeaderActions(): array
     {
         return [
-            Actions\CreateAction::make(),
+            Actions\CreateAction::make()
+                ->label('Nouveau Reversement')
+                ->icon('heroicon-o-plus')
+                ->color('info'),
             
         ];
     }
@@ -27,4 +30,10 @@ class ListRemittances extends ListRecords
             ReversementStatsWidget::class,
         ];
     }
+
+     public function getTitle(): string
+    {
+        return 'Gestion des Reversements';
+    }
+
 }

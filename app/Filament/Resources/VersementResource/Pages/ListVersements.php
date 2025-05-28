@@ -16,4 +16,14 @@ class ListVersements extends ListRecords
             Actions\CreateAction::make(),
         ];
     }
+
+    public function getTitle(): string
+    {
+        return 'Gestion des Versements';
+    }
+
+    public function getSubheading(): string
+    {
+        return 'Liste des versements effectués par les locataires ';
+    }
 }

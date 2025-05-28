@@ -14,7 +14,10 @@ class ListProperties extends ListRecords
     protected function getHeaderActions(): array
     {
         return [
-            Actions\CreateAction::make(),
+            Actions\CreateAction::make()
+                ->label('Nouvelle Propriété')
+                ->icon('heroicon-o-plus')
+                ->color('info'),
         ];
     }
 
@@ -25,5 +28,9 @@ class ListProperties extends ListRecords
         return [
             // PropertyPaymentStatsWidget::class,
         ];
+    }
+    public function getTitle(): string
+    {
+        return 'Gestion des Propriétés';
     }
 }

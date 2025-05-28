@@ -14,7 +14,10 @@ class ListExpenses extends ListRecords
     protected function getHeaderActions(): array
     {
         return [
-            Actions\CreateAction::make(),
+            Actions\CreateAction::make()
+                ->label('Nouvelle Dépense')
+                ->icon('heroicon-o-plus')
+                ->color('info'),
         ];
     }
 
@@ -23,5 +26,10 @@ class ListExpenses extends ListRecords
         return [
             ExpenseStatsOverview::class,
         ];
+    }
+
+    public function getTitle(): string
+    {
+        return 'Gestion des Dépenses';
     }
 }

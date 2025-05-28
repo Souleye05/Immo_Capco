@@ -153,14 +153,31 @@ class PaymentResource extends Resource
                     ->suffix('FCFA'),
 
                 Flatpickr::make('current_month')
-                    ->label('Mois concerné')
+                    ->label(function (Get $get): string {
+                        $typeValue = $get('type');
+                        if ($typeValue) {
+                            $type = PaymentType::from($typeValue);
+                            return $type->getMonthLabel();
+                        }
+                        return 'Mois concerné';
+                    })
                     ->monthSelect()
-                    ->visible(fn (Get $get): bool => 
-                        $get('type') === PaymentType::LOYER->value
-                    )
-                    ->required(fn (Get $get): bool => 
-                        $get('type') === PaymentType::LOYER->value
-                    ),
+                    ->visible(function (Get $get): bool {
+                        $typeValue = $get('type');
+                        if ($typeValue) {
+                            $type = PaymentType::from($typeValue);
+                            return $type->requiresMonth();
+                        }
+                        return false;
+                    })
+                    ->required(function (Get $get): bool {
+                        $typeValue = $get('type');
+                        if ($typeValue) {
+                            $type = PaymentType::from($typeValue);
+                            return $type->requiresMonth();
+                        }
+                        return false;
+                    }),
 
                 DatePicker::make('date_payment')
                     ->label('Date du paiement')
@@ -309,7 +326,7 @@ class PaymentResource extends Resource
                             : "Télécharger la quittance détaillée ({$versementsCount} versements)";
     }),
 
-                Tables\Actions\EditAction::make(),               
+                Tables\Actions\EditAction::make(),
             // Bouton explicite pour voir les détails du locataire
                 Tables\Actions\Action::make('viewTenantDetails')
                     ->label('Détails locataire')

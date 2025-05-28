@@ -14,7 +14,10 @@ class ListFlats extends ListRecords
     protected function getHeaderActions(): array
     {
         return [
-            Actions\CreateAction::make(),
+            Actions\CreateAction::make()
+                ->label('Ajouter Appartement')
+                ->icon('heroicon-o-plus')
+                ->color('info'),
         ];
     }
 
@@ -23,5 +26,10 @@ class ListFlats extends ListRecords
         return [
             FlatStatsWidget::class,
         ];
+    }
+
+    public function getTitle(): string
+    {
+        return 'Gestion des Appartements';
     }
 }

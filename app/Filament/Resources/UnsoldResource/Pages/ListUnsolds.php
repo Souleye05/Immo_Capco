@@ -13,7 +13,15 @@ class ListUnsolds extends ListRecords
     protected function getHeaderActions(): array
     {
         return [
-            Actions\CreateAction::make(),
+            Actions\CreateAction::make()
+                ->label('Ajouter impayé')
+                ->icon('heroicon-o-plus')
+                ->color('danger'),
         ];
+    }
+
+    public function getTitle(): string
+    {
+        return 'Gestion des impayés';
     }
 }
