@@ -30,4 +30,21 @@ class Tenant extends Model
     {
         return $this->hasMany(Unsold::class);
     }
+
+    public function scopeByFlatId($query, $flatId)
+    {
+        return $query->where('flat_id', $flatId);
+    }
+    public function scopeByName($query, $name)
+    {
+        return $query->where('name', 'like', "%{$name}%");
+    }
+    public function scopeByPhone($query, $phone)
+    {
+        return $query->where('phone', 'like', "%{$phone}%");
+    }
+    public function scopeByAddress($query, $address)
+    {
+        return $query->where('address', 'like', "%{$address}%");
+    }
 }

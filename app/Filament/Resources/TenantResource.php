@@ -67,6 +67,8 @@ class TenantResource extends Resource
                 //
             ])
             ->actions([
+                // Tables\Actions\ViewTenant::make(),
+                Tables\Actions\ViewAction::make(),
                 Tables\Actions\EditAction::make(),
             ])
             ->bulkActions([
@@ -85,12 +87,15 @@ class TenantResource extends Resource
         ];
     }
 
+   
     public static function getPages(): array
     {
         return [
             'index' => Pages\ListTenants::route('/'),
             'create' => Pages\CreateTenant::route('/create'),
+            'view' => Pages\ViewTenant::route('/{record}'),
             'edit' => Pages\EditTenant::route('/{record}/edit'),
         ];
     }
+   
 }
