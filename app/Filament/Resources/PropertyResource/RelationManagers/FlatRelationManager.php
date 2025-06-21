@@ -36,10 +36,13 @@ class FlatRelationManager extends RelationManager
                     ->searchable()
                     ->sortable()
                     ->alignCenter(), // Centrer la colonne
-                Tables\Columns\TextColumn::make('tenant.name')
-                    ->label('Locataire')
-                    ->searchable()
-                    ->alignCenter() // Centrer la colonne
+                Tables\Columns\TextColumn::make('current_tenant_name')
+                    ->label('Locataire actuel')
+                    ->getStateUsing(function ($record) {
+                        return $record->current_tenant?->name ?? 'Aucun';
+                    })
+                    ->placeholder('Aucun')
+                    ->searchable(['tenants.name'])
                     ->sortable(),
                 Tables\Columns\TextColumn::make('loyer')
                     ->label('Loyer')

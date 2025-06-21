@@ -57,15 +57,15 @@ class ListTenants extends ListRecords
 
             'with_flats' => Tab::make('Avec appartements')
                 ->label('Avec appartements')
-                ->badge(Tenant::has('flat')->count())
+                ->badge(Tenant::has('flatThroughContract')->count())
                 ->icon('heroicon-o-home')
-                ->modifyQueryUsing(fn (EloquentBuilder $query) => $query->has('flat')),
+                ->modifyQueryUsing(fn (EloquentBuilder $query) => $query->has('flatThroughContract')),
 
             'without_flats' => Tab::make('Sans appartements')
                 ->label('Sans appartements')
-                ->badge(Tenant::doesntHave('flat')->count())
+                ->badge(Tenant::doesntHave('flatThroughContract')->count())
                 ->icon('heroicon-o-home-modern')
-                ->modifyQueryUsing(fn (EloquentBuilder $query) => $query->doesntHave('flat')),
+                ->modifyQueryUsing(fn (EloquentBuilder $query) => $query->doesntHave('flatThroughContract')),
 
         ];
     }

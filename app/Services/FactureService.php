@@ -6,37 +6,73 @@ use App\Models\Payment;
 use App\Models\Flat;
 use App\Models\Tenant;
 use App\Enums\PaymentType;
+use App\Enums\RemittanceType;
+use App\Models\Remittance;
 use App\Repositories\FlatRepository;
 use Illuminate\Support\Facades\DB;
-use Illuminate\Validation\ValidationException;
+use Illuminate\Support\Str;
+use Carbon\Carbon;
 
 class FactureService
 {
-  protected $flatRepository;
-  public function __construct(FlatRepository $flatRepository)
-  {
-    $this->flatRepository = $flatRepository;
-  }
+    protected FlatRepository $flatRepository;
 
-  /**
-     * Générer un numéro de facture unique selon le type
-     */
-public function generateUniqueNumero(PaymentType $type): string
+    public function __construct(FlatRepository $flatRepository)
     {
-       $prefix = $type->getPrefix();
-        $randomNumber = random_int(100000, 999999);
-        
-        return "{$prefix}-{$randomNumber}";
+        $this->flatRepository = $flatRepository;
     }
 
     /**
+     * Générer un numéro de facture unique selon le type
+     */
+    public function generateUniqueNumero(PaymentType $type): string
+    {
+        $prefix = $type->getPrefix();
+        $year = Carbon::now()->format('Y');
+        $month = Carbon::now()->format('m');
+        
+        // Compteur séquentiel par type, année et mois pour éviter les collisions
+        $count = Payment::where('type', $type->value)
+            ->whereYear('created_at', $year)
+            ->whereMonth('created_at', $month)
+            ->count() + 1;
+        
+        $sequence = str_pad($count, 4, '0', STR_PAD_LEFT);
+        
+        return "{$prefix}-{$year}{$month}-{$sequence}";
+    }
+
+    /**
+     * Générer un numéro de remittance unique selon le type
+     */
+
+     public function generateUniqueNumber(RemittanceType $type): string
+     {
+         $prefix = $type->getPrefix();
+         $year = Carbon::now()->format('Y');
+         $month = Carbon::now()->format('m');
+         
+         // Compteur séquentiel par type, année et mois pour éviter les collisions
+         $count = Remittance::where('remittance_type', $type->value)
+             ->whereYear('created_at', $year)
+             ->whereMonth('created_at', $month)
+             ->count() + 1;
+         
+         $sequence = str_pad($count, 4, '0', STR_PAD_LEFT);
+         
+         return "{$prefix}-{$year}{$month}-{$sequence}";
+     }
+    /**
      * Calculer le montant selon le type de facture et l'appartement
      */
-    public function calculateAmountByType(PaymentType $type, Flat $flat): float
+    public function calculateAmountByType(PaymentType $type, ?Flat $flat): float
     {
+        if (!$flat) {
+        throw new \InvalidArgumentException('Appartement introuvable pour ce locataire.');
+    }
         return match($type) {
-            PaymentType::LOYER => $flat->loyer,
-            PaymentType::CAUTION => $flat->caution,
+            PaymentType::LOYER => (float) $flat->loyer,
+            PaymentType::CAUTION => (float) $flat->caution,
             PaymentType::COMMISSION => $this->flatRepository->calculateCommission($flat, $flat->loyer),
         };
     }
@@ -53,9 +89,40 @@ public function generateUniqueNumero(PaymentType $type): string
     }
 
     /**
-     * Vérifie si un paiement peut être créé selon les règles métier
+     * Vérifie si une facture du même type existe déjà pour ce mois et ce contrat
      */
-    public function canCreatePayment(PaymentType $type, int $tenantId, int $flatId): array
+    public function paymentExistsForMonthAndContract(PaymentType $type, int $contractId, ?string $month): bool
+    {
+        // Pour la caution, pas de vérification de mois (elle est unique)
+        if ($type === PaymentType::CAUTION) {
+            return false;
+        }
+        
+        if (!$month) {
+            return false;
+        }
+        
+        return Payment::where('contract_id', $contractId)
+            ->where('type', $type->value)
+            ->where('current_month', $month)
+            ->exists();
+    }
+
+    /**
+     * Vérifie si un loyer existe déjà pour ce mois
+     */
+    public function loyerAlreadyExistsForMonth(int $tenantId, int $flatId, ?string $month): bool
+    {
+        if (!$month) return false;
+        
+        return Payment::where('tenant_id', $tenantId)
+            ->where('flat_id', $flatId)
+            ->where('type', PaymentType::LOYER->value)
+            ->where('current_month', $month)
+            ->exists();
+    }
+
+    public function canCreatePayment(PaymentType $type, int $tenantId, int $flatId, ?string $month = null, ?int $contractId = null): array
     {
         $canCreate = true;
         $message = '';
@@ -70,7 +137,18 @@ public function generateUniqueNumero(PaymentType $type): string
 
             case PaymentType::LOYER:
             case PaymentType::COMMISSION:
-                // Pas de restriction particulière pour le moment
+                // Vérification principale : facture du même type pour le même mois et contrat
+                if ($contractId && $month && $this->paymentExistsForMonthAndContract($type, $contractId, $month)) {
+                    $canCreate = false;
+                    $typeLabel = $type->getLabel();
+                    $message = "Une facture de type '{$typeLabel}' existe déjà pour ce contrat dans le mois de {$month}.";
+                }
+                
+                // Vérification supplémentaire pour le loyer (legacy)
+                if ($canCreate && $type === PaymentType::LOYER && $month && $this->loyerAlreadyExistsForMonth($tenantId, $flatId, $month)) {
+                    $canCreate = false;
+                    $message = "Un loyer existe déjà pour le mois de {$month}.";
+                }
                 break;
         }
 
@@ -79,33 +157,41 @@ public function generateUniqueNumero(PaymentType $type): string
             'message' => $message
         ];
     }
-
     /**
      * Prépare les données pour la création d'un paiement
      */
     public function preparePaymentData(array $formData): array
     {
         $type = PaymentType::from($formData['type']);
-        $tenant = Tenant::with('flat')->find($formData['tenant_id']);
-        $flat = $tenant->flat;
+        $tenant = Tenant::with('flatThroughContract')->find($formData['tenant_id']);
+
+        if (!$tenant || !$tenant->flatThroughContract) {
+            throw new \InvalidArgumentException('Locataire ou appartement invalide');
+        }
+
+        $flat = $tenant->flatThroughContract;
+        $month = $formData['current_month'] ?? null;
 
         // Validation
-        $validation = $this->canCreatePayment($type, $tenant->id, $flat->id);
+        $validation = $this->canCreatePayment($type, $tenant->id, $flat->id, $month);
         if (!$validation['can_create']) {
             throw new \Exception($validation['message']);
         }
 
+        $amount = $this->calculateAmountByType($type, $flat);
+
         return [
             'numero' => $this->generateUniqueNumero($type),
-            'payment_type' => $type->value,
+            'type' => $type->value,
             'tenant_id' => $tenant->id,
             'flat_id' => $flat->id,
-            'amount' => $this->calculateAmountByType($type, $flat),
-            'current_month' => $formData['current_month'] ?? null,
+            'contract_id' => $formData['contract_id'],
+            'amount' => $amount,
+            'current_month' => $month,
             'date_payment' => $formData['date_payment'],
-            'status' => false, // Non payé par défaut
+            'status' => false,
             'amount_paid' => 0,
-            'amount_remaining' => $this->calculateAmountByType($type, $flat),
+            'amount_remaining' => $amount,
         ];
     }
 
@@ -121,5 +207,70 @@ public function generateUniqueNumero(PaymentType $type): string
         }
         
         return $label;
+    }
+
+    /**
+     * Vérifie si un contrat est valide pour un paiement
+     */
+    public function validateContract(int $contractId, int $tenantId): bool
+    {
+        return DB::table('contracts')
+            ->where('id', $contractId)
+            ->where('tenant_id', $tenantId)
+            ->exists();
+    }
+    /**
+     * Obtient les factures existantes pour un contrat et un mois donné
+     */
+    public function getExistingPaymentsForMonth(int $contractId, string $month): array
+    {
+        return Payment::where('contract_id', $contractId)
+            ->where('current_month', $month)
+            ->with(['tenant', 'flat'])
+            ->get()
+            ->map(function ($payment) {
+                return [
+                    'id' => $payment->id,
+                    'numero' => $payment->numero,
+                    'type' => $payment->type->getLabel(),
+                    'amount' => $payment->amount,
+                ];
+            })
+            ->toArray();
+    }
+
+    /**
+     * Vérifie et retourne les détails de validation pour un contrat/mois
+     */
+    public function validatePaymentCreation(PaymentType $type, int $contractId, ?string $month): array
+    {
+        if (!$month || $type === PaymentType::CAUTION) {
+            return ['can_create' => true, 'message' => '', 'existing_payments' => []];
+        }
+
+        $existingPayments = $this->getExistingPaymentsForMonth($contractId, $month);
+        $sameTypeExists = collect($existingPayments)->contains('type', $type->getLabel());
+
+        if ($sameTypeExists) {
+            $existingPayment = collect($existingPayments)->first(fn($p) => $p['type'] === $type->getLabel());
+            return [
+                'can_create' => false,
+                'message' => "Une facture de type '{$type->getLabel()}' (N° {$existingPayment['numero']}) existe déjà pour ce contrat dans le mois de {$month}.",
+                'existing_payments' => $existingPayments
+            ];
+        }
+
+        // Information sur les autres types de factures existantes
+        $otherTypes = collect($existingPayments)->pluck('type')->unique()->implode(', ');
+        $infoMessage = '';
+        if ($otherTypes) {
+            $infoMessage = "Autres factures existantes pour ce mois : {$otherTypes}";
+        }
+
+        return [
+            'can_create' => true,
+            'message' => $infoMessage,
+            'existing_payments' => $existingPayments
+        ];
     }
 }

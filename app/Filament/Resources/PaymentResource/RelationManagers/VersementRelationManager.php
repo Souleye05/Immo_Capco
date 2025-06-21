@@ -123,7 +123,7 @@ class VersementRelationManager extends RelationManager
     private function handleVersementCreated($livewire, $record): void
     {
         try {
-            $result = $this->getVersementService()->processVersementCreated($record['payment_id']);
+            $result = $this->getVersementService()->processVersementCreatedImproved($record['payment_id']);
             $this->showSuccessNotification($result['title'], $result['message']);
         } catch (\Exception $e) {
             $this->showErrorNotification('Erreur', 'Une erreur est survenue lors du traitement');

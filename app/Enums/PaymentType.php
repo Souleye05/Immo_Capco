@@ -16,7 +16,7 @@ enum PaymentType: string
             self::CAUTION => 'Caution',
             self::COMMISSION => 'Commission',
         };
-    }
+    }       
 
     public function getPrefix(): string
     {

@@ -13,6 +13,7 @@ class Payment extends Model
 
     protected $fillable = [
         'flat_id',
+        'contract_id',
         'tenant_id',
         'numero',
         'type',
@@ -23,8 +24,19 @@ class Payment extends Model
     ];
 
     protected $casts = [
-        'type' => PaymentType::class,       
+        'type' => PaymentType::class, 
+              
     ];
+
+    public function contract()
+    {
+        return $this->belongsTo(Contract::class);
+    }
+
+    public function getTenantAttribute()
+    {
+        return $this->contract ? $this->contract->tenant : $this->belongsTo(Tenant::class);
+    }
 // Définir une méthode pour vérifier si la facture est complète
 public function isComplete(): bool
 {

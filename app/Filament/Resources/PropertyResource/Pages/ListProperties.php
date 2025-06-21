@@ -15,7 +15,7 @@ class ListProperties extends ListRecords
     {
         return [
             Actions\CreateAction::make()
-                ->label('Nouvelle Propriété')
+                ->label('Nouvelle Immeuble')
                 ->icon('heroicon-o-plus')
                 ->color('info'),
         ];
@@ -31,6 +31,6 @@ class ListProperties extends ListRecords
     }
     public function getTitle(): string
     {
-        return 'Gestion des Propriétés';
+        return 'Gestion des Immeubles';
     }
 }

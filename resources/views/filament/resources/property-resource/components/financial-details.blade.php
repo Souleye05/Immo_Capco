@@ -5,9 +5,15 @@
             <h3 class="text-lg font-medium leading-6 text-gray-900">
                 Résumé financier - {{ $property->name }}
             </h3>
-            <p class="max-w-2xl mt-1 text-sm text-gray-500">
-                Période: {{ ['Janvier', 'Février', 'Mars', 'Avril', 'Mai', 'Juin', 'Juillet', 'Août', 'Septembre', 'Octobre', 'Novembre', 'Décembre'][$month - 1] }} {{ $year }}
-            </p>
+           @php
+    $monthIndex = max(1, (int) $month); // minimum 1
+    $monthLabel = ['Janvier', 'Février', 'Mars', 'Avril', 'Mai', 'Juin', 'Juillet', 'Août', 'Septembre', 'Octobre', 'Novembre', 'Décembre'][$monthIndex - 1];
+@endphp
+
+<p class="max-w-2xl mt-1 text-sm text-gray-500">
+    Période: {{ $monthLabel }} {{ $year }}
+</p>
+
         </div>
         <div class="border-t border-gray-200">
             <dl>

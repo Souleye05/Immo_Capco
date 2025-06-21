@@ -28,7 +28,7 @@ class ListPayments extends ListRecords
         return [
             Actions\CreateAction::make(),
 
-            Action::make('generate')
+            Actions\Action::make('generate')
                 ->label('Générer')
                 ->action('openSettingModal')
                 ->form( [
@@ -105,30 +105,30 @@ class ListPayments extends ListRecords
                 ->label('Nouvelle facture')
                 ->icon('heroicon-o-plus')
                 ->color('info'),
-            Actions\Action::make('generateMonthlyInvoices')
+            Actions\Action::make('GenerateMonthlyPayments')
                 ->label('Générer les factures du mois')
                 ->icon('heroicon-o-document-text')
                 ->color('success')
                 ->action(function () {
-                    $output = Artisan::call('invoices:generate-monthly');
-                    $exitCode = Artisan::output();
+    $output = Artisan::call('payments:generate');
+    $exitCode = Artisan::output();
 
-        if (str_contains($exitCode, 'Aucune nouvelle facture')) {
-            Notification::make()
-                ->title('Déjà générées')
-                ->body('Les factures de ce mois existent déjà.')
-                ->warning()
-                ->send();
-        } else {
-            Notification::make()
-                ->title('Factures générées')
-                ->body('Les factures du mois ont été créées avec succès.')
-                ->success()
-                ->send();
-        }
+    if (str_contains($exitCode, 'Aucune nouvelle facture')) {
+        Notification::make()
+            ->title('Déjà générées')
+            ->body('Les factures de ce mois existent déjà.')
+            ->warning()
+            ->send();
+    } else {
+        Notification::make()
+            ->title('Factures générées')
+            ->body('Les factures du mois ont été créées avec succès.')
+            ->success()
+            ->send();
+    }
 
-        $this->dispatch('refresh');
-    }),
+    $this->dispatch('refresh');
+})
         ];
     }
 

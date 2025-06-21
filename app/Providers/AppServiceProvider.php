@@ -48,10 +48,30 @@ class AppServiceProvider extends ServiceProvider
      */
     public function boot(): void
     {
+        // $this->callAfterResolving(Schedule::class, function (Schedule $schedule) {
+        //     // Définissez vos tâches planifiées ici
+        //     $schedule->command('invoices:generate-monthly')->monthlyOn(1, '00:00'); // 1er du mois à 00:00
+        // });
         $this->callAfterResolving(Schedule::class, function (Schedule $schedule) {
             // Définissez vos tâches planifiées ici
-            $schedule->command('invoices:generate-monthly')->monthlyOn(1, '00:00'); // 1er du mois à 00:00
+            $schedule->command('payments:generate')
+            // ->monthlyOn(1, '00:00'); // 1er du mois à 00:00
+            ->monthlyOn(1, '08:00')
+             ->timezone('Africa/Dakar');
+
+             // Vérifier les alertes chaque jour à 8h
+    $schedule->command('contracts:check-renewals')
+             ->dailyAt('08:00')
+             ->withoutOverlapping()
+             ->timezone('Africa/Dakar');
         });
+        // $this->callAfterResolving(Schedule::class, function (Schedule $schedule) {
+        //     // Définissez vos tâches planifiées ici
+        //     $schedule->command('payments:generate')->monthlyOn(1, '00:00'); // 1er du mois à 00:00
+        // });
+
+        
+        
         // Enregistrement de l'observer pour le modèle Versement
         Versement::observe(VersementObserver::class); // Décommenter si nécessaire
 

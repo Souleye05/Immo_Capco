@@ -60,26 +60,26 @@ class ViewTenant extends ViewRecord
                 ->icon('heroicon-o-calendar')
                 ->schema([
                     // Informations sur l'appartement
-                    Components\TextEntry::make('flat.reference')
+                    Components\TextEntry::make('flatThroughContract.reference')
                         ->label('Référence appartement')
                         ->icon('heroicon-o-home')
                         ->color('primary')
                         ->placeholder('Appartement non assigné'),
 
-                    Components\TextEntry::make('flat.type')
+                    Components\TextEntry::make('flatThroughContract.type')
                         ->label('Type d\'appartement')
                         ->icon('heroicon-o-squares-2x2')
                         ->color('info')
                         ->placeholder('Type non renseigné'),
 
                     // Informations sur la propriété
-                    Components\TextEntry::make('flat.property.name')
+                    Components\TextEntry::make('flatThroughContract.property.name')
                         ->label('Propriété')
                         ->icon('heroicon-o-building-office')
                         ->color('secondary')
                         ->placeholder('Propriété non assignée'),
 
-                    Components\TextEntry::make('flat.property.address')
+                    Components\TextEntry::make('flatThroughContract.property.address')
                         ->label('Adresse de la propriété')
                         ->copyable()
                         ->copyMessage('Adresse copiée !')
@@ -88,27 +88,27 @@ class ViewTenant extends ViewRecord
                         ->color('info')
                         ->placeholder('Adresse non renseignée'),
 
-                    Components\TextEntry::make('flat.property.type')
+                    Components\TextEntry::make('flatThroughContract.property.type')
                         ->label('Type de propriété')
                         ->icon('heroicon-o-building-library')
                         ->color('gray')
                         ->placeholder('Type non renseigné'),
 
-                    Components\TextEntry::make('flat.property.owner.name')
+                    Components\TextEntry::make('flatThroughContract.property.owner.name')
                         ->label('Propriétaire')
                         ->icon('heroicon-o-user-circle')
                         ->color('gray')
                         ->placeholder('Propriétaire non renseigné'),
 
                     // Informations de loyer
-                    Components\TextEntry::make('flat.loyer')
+                    Components\TextEntry::make('flatThroughContract.loyer')
                         ->label('Montant du loyer')
                         ->money('EUR')
                         ->icon('heroicon-o-banknotes')
                         ->color('success')
                         ->placeholder('Montant non renseigné'),
 
-                    Components\TextEntry::make('flat.caution')
+                    Components\TextEntry::make('flatThroughContract.caution')
                         ->label('Caution')
                         ->money('EUR')
                         ->icon('heroicon-o-shield-check')

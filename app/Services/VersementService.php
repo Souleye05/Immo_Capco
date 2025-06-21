@@ -2,6 +2,7 @@
 
 namespace App\Services;
 
+use App\Enums\PaymentType;
 use App\Models\Payment;
 use App\Models\Versement;
 use App\Models\Unsold;
@@ -63,7 +64,10 @@ class VersementService
         // Mettre à jour le statut du paiement
         $this->updatePaymentStatus($payment->id, 1);
 
-        $message = "Le locataire a payé son loyer complet.";
+        // Obtenir le message selon le type de paiement
+        $paymentTypeMessage = $this->getPaymentTypeMessage($payment->type);
+        
+        $message = $paymentTypeMessage['complete_message'];
         
         if ($unsoldsResolved['count'] > 0) {
             $message .= " Impayés réglés: " . 
@@ -71,8 +75,60 @@ class VersementService
         }
 
         return [
-            'title' => 'Paiement complet',
+            'title' => $paymentTypeMessage['title'],
             'message' => $message
+        ];
+    }
+
+    /**
+     * Obtenir les messages selon le type de paiement
+     */
+    private function getPaymentTypeMessage(PaymentType $paymentType): array
+    {
+        $messages = [
+            PaymentType::LOYER->value => [
+                'title' => 'Loyer payé intégralement',
+                'complete_message' => 'Le locataire a payé son loyer complet.',
+                'partial_message' => 'Versement sur le loyer enregistré.'
+            ],
+            PaymentType::CAUTION->value => [
+                'title' => 'Caution payée intégralement',
+                'complete_message' => 'Le locataire a payé sa caution complète.',
+                'partial_message' => 'Versement sur la caution enregistré.'
+            ],
+            PaymentType::COMMISSION->value => [
+                'title' => 'Commission payée intégralement',
+                'complete_message' => 'La commission a été payée intégralement.',
+                'partial_message' => 'Versement sur la commission enregistré.'
+            ]
+        ];
+
+        return $messages[$paymentType->value] ?? [
+            'title' => 'Paiement complet',
+            'complete_message' => 'Le paiement a été effectué intégralement.',
+            'partial_message' => 'Versement enregistré.'
+        ];
+    }
+
+    /**
+     * Traiter les actions après création d'un versement (version améliorée)
+     */
+    public function processVersementCreatedImproved(int $paymentId): array
+    {
+        $payment = Payment::findOrFail($paymentId);
+        $totalVersements = $this->getTotalVersements($paymentId);
+
+        if ($totalVersements >= $payment->amount) {
+            return $this->handleFullPayment($payment);
+        }
+
+        // Message pour versement partiel selon le type
+        $paymentTypeMessage = $this->getPaymentTypeMessage($payment->type);
+        
+        return [
+            'title' => 'Versement enregistré',
+            'message' => $paymentTypeMessage['partial_message'] . ' Montant restant: ' . 
+                        number_format($payment->amount - $totalVersements, 0, ',', ' ') . ' FCFA'
         ];
     }
 

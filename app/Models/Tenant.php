@@ -1,7 +1,8 @@
 <?php
 
-namespace App\Models;           
+namespace App\Models;
 
+use App\Enums\ContractStatus;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 
@@ -13,13 +14,13 @@ class Tenant extends Model
         'name',
         'phone',
         'address',
-        'flat_id'
+        'flat_id',
     ];
 
-    public function flat()
-    {
-        return $this->hasOne(Flat::class, 'tenant_id');
-    }
+    // public function flat()
+    // {
+    //     return $this->hasOne(Flat::class, 'tenant_id');
+    // }
 
     public function payment()
     {
@@ -47,4 +48,26 @@ class Tenant extends Model
     {
         return $query->where('address', 'like', "%{$address}%");
     }
+
+    public function activeContract()
+{
+    return $this->hasOne(Contract::class)->where('status', ContractStatus::ACTIVE);
+}
+public function contracts()
+{
+    return $this->hasMany(Contract::class);
+}
+
+
+public function flatThroughContract()
+{
+    return $this->hasOneThrough(
+        Flat::class,
+        Contract::class,
+        'tenant_id',   // Foreign key on contracts table
+        'id',          // Foreign key on flats table
+        'id',          // Local key on tenants table
+        'flat_id'      // Local key on contracts table
+    )->where('contracts.status', ContractStatus::ACTIVE);
+}
 }

@@ -1,5 +1,6 @@
 <?php
 
+use App\Http\Controllers\ContractPdfController;
 use App\Http\Controllers\DocumentController;
 use Illuminate\Support\Facades\Route;
 
@@ -39,3 +40,10 @@ Route::prefix('documents')->name('documents.')->group(function () {
     Route::get('/quittance-versement/{versement}', [DocumentController::class, 'downloadQuittanceFromVersement'])
         ->name('download-quittance-from-versement');
 });
+
+Route::get('/contracts/{contract}/pdf', [ContractPdfController::class, 'generatePdf'])
+    ->name('contracts.pdf');
+    
+Route::get('/contracts/{contract}/pdf/view', [ContractPdfController::class, 'viewPdf'])
+    ->name('contracts.pdf.view');
+

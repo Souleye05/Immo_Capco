@@ -15,6 +15,7 @@ return new class extends Migration
         Schema::create('payments', function (Blueprint $table) {
             $table->id();
             $table->foreignId('flat_id');
+            $table->foreignId('contract_id')->constrained()->onDelete('cascade');
             $table->string('numero')->nullable();
             // Ajouter la colonne type après numero
             $table->enum('type', array_column(PaymentType::cases(), 'value'))
@@ -28,7 +29,8 @@ return new class extends Migration
             $table->boolean('status')->nullable();
             $table->date('date_payment')->nullable();
             $table->timestamps();
-        });
+
+            $table->index('contract_id');        });
     }
 
     /**

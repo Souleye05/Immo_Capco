@@ -17,10 +17,10 @@ class GenerateMonthlyInvoices extends Command
     $month = Carbon::now()->format('Y-m');
     $count = 0;
 
-    $tenants = Tenant::with('flat')->get();
+    $tenants = Tenant::with('flatThroughContract')->get();
 
     foreach ($tenants as $tenant) {
-        if (!$tenant->flat) continue;
+        if (!$tenant->flatThroughContract) continue;
 
         $exists = Payment::where('tenant_id', $tenant->id)
             ->where('current_month', $month)
@@ -30,8 +30,8 @@ class GenerateMonthlyInvoices extends Command
             Payment::create([
                 'numero' => 'FAC-' . random_int(100000, 999999),
                 'tenant_id' => $tenant->id,
-                'flat_id' => $tenant->flat->id,
-                'amount' => $tenant->flat->loyer,
+                'flat_id' => $tenant->flatThroughContract?->id,
+                'amount' => $tenant->flatThroughContract?->loyer,
                 'current_month' => $month,
                 'date_payment' => now(),
                 'status' => false,

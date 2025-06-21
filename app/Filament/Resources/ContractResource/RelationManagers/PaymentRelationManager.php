@@ -1,42 +1,38 @@
 <?php
 
-namespace App\Filament\Resources;
+namespace App\Filament\Resources\ContractResource\RelationManagers;
 
 use App\Enums\PaymentType;
-use App\Filament\Resources\PaymentResource\Pages;
-use App\Filament\Resources\PaymentResource\RelationManagers\VersementRelationManager;
-use App\Models\Payment;
-use App\Models\Flat;
-use App\Models\Tenant;
 use App\Models\Contract;
+use App\Models\Payment;
+use App\Models\Tenant;
 use App\Services\FactureService;
 use Coolsam\FilamentFlatpickr\Forms\Components\Flatpickr;
 use Filament\Forms;
+use Filament\Forms\Components\DatePicker;
+use Filament\Forms\Components\Placeholder;
+use Filament\Forms\Components\Select;
+use Filament\Forms\Components\TextInput;
+use Filament\Forms\Components\Toggle;
 use Filament\Forms\Form;
 use Filament\Forms\Get;
 use Filament\Forms\Set;
-use Filament\Resources\Resource;
-use Filament\Forms\Components\TextInput;
-use Filament\Forms\Components\Select;
-use Filament\Forms\Components\Toggle;
-use Filament\Forms\Components\DatePicker;
-use Filament\Forms\Components\Placeholder;
 use Filament\Notifications\Notification;
-use Filament\Tables\Table;
+use Filament\Resources\RelationManagers\RelationManager;
+use Filament\Support\Enums\FontWeight;
 use Filament\Tables;
 use Filament\Tables\Columns\TextColumn;
-use Filament\Support\Enums\FontWeight;
+use Filament\Tables\Table;
+use Illuminate\Database\Eloquent\Builder;
+use Illuminate\Database\Eloquent\SoftDeletingScope;
 
-class PaymentResource extends Resource
+class PaymentRelationManager extends RelationManager
 {
-    protected static ?string $model = Payment::class;
+    protected static string $relationship = 'payments';
+    protected static ?string $recordTitleAttribute = 'amount';
+    protected static ?string $title = 'Factures';
 
-    protected static ?string $navigationIcon = 'heroicon-o-rectangle-stack';
-    protected static ?string $navigationGroup = 'Paiement';
-
-    public static ?string $label = 'facture';
-
-    public static function form(Form $form): Form
+    public function form(Form $form): Form
     {
         return $form
             ->schema([
@@ -70,11 +66,11 @@ class PaymentResource extends Resource
                         self::validatePaymentOnTypeChange($get, $set, $service);
                     }),
 
-                    TextInput::make('numero')
-                        ->label('Numéro de facture')
-                        ->disabled()
-                        ->dehydrated(true)
-                        ->required(),
+                TextInput::make('numero')
+                    ->label('Numéro de facture')
+                    ->disabled()
+                    ->dehydrated(true)
+                    ->required(),
 
                 Select::make('tenant_id')
                     ->label('Locataire')
@@ -113,9 +109,9 @@ class PaymentResource extends Resource
                         }
 
                         $tenant = Tenant::with('flatThroughContract')->find($state);
-
-                        if ($tenant && $tenant->flatThroughContract) {
-                            $set('flat_id', $tenant->flatThroughContract->id);
+                        
+                        if ($tenant && $tenant->flatThroughContract?->id) {
+                            $set('flat_id', $tenant->flatThroughContract?->id);
                             $set('contract_id', null);
                             
                             // Calculer le montant selon le type sélectionné
@@ -125,7 +121,7 @@ class PaymentResource extends Resource
                                 $service = app(FactureService::class);
                                 
                                 // Vérification de base (caution)
-                                $validation = $service->canCreatePayment($type, $tenant->id, $tenant->flatThroughContract->id);
+                                $validation = $service->canCreatePayment($type, $tenant->id, $tenant->flatThroughContract?->id);
                                 
                                 if (!$validation['can_create']) {
                                     Notification::make()
@@ -140,7 +136,7 @@ class PaymentResource extends Resource
                                     return;
                                 }
                                 
-                                $amount = $service->calculateAmountByType($type, $tenant->flatThroughContract);
+                                $amount = $service->calculateAmountByType($type, $tenant->flatThroughContract?->id);
                                 $set('amount', $amount);
                                 $set('amount_remaining', $amount);
                             }
@@ -315,7 +311,168 @@ class PaymentResource extends Resource
             ]);
     }
 
-    /**
+    public  function table(Table $table): Table
+    {
+        return $table
+            ->columns([
+                Tables\Columns\TextColumn::make('numero')
+                    ->label('Numéro de facture')
+                    ->alignCenter()
+                    ->searchable()
+                    ->sortable(),
+                    // Badge pour le type
+                Tables\Columns\TextColumn::make('type')
+                    ->label('Type')
+                    ->badge()
+                    ->alignCenter()
+                    ->formatStateUsing(fn (PaymentType $state): string => $state->getLabel())
+                    ->colors([
+                        'success' => PaymentType::LOYER->value,
+                        'warning' => PaymentType::CAUTION->value,
+                        'info' => PaymentType::COMMISSION->value,
+                    ])
+                    ->sortable(),
+
+                // Modification pour faire un clic sur le nom du locataire pour afficher les détails
+                Tables\Columns\TextColumn::make('tenant.name')
+                    ->label('Locataire')
+                    ->searchable()
+                    ->alignCenter()
+                    ->sortable()
+                    ->toggleable()
+                    ->weight(FontWeight::Bold)
+                    ->action(
+                        Tables\Actions\Action::make('viewTenantDetails')
+                            ->label('Voir les détails')
+                            ->modalHeading(fn (Payment $record): string => 'Détails du locataire: ' . $record->tenant->name)
+                            ->modalWidth('md')
+                            ->modalContent(function (Payment $record) {
+                                $tenant = $record->tenant;
+                                // $flat = $tenant->flatThroughContract? ?? null;
+                                
+                                return view('filament.resources.payment-resource.tenant-details', [
+                                    'tenant' => $tenant,
+                                    // 'flat' => $flat,
+                                ]);
+                            })
+                    ),
+
+                TextColumn::make('current_month')
+                    ->label('Mois de')
+                    ->alignCenter()
+                    ->placeholder('N/A')
+                    ->toggleable(),
+                                    
+                TextColumn::make('amount')
+                    ->label('Montant dû')                
+                    ->formatStateUsing(fn ($state): string => number_format($state, 0, ',', ' ') . ' FCFA')
+                    ->alignCenter()
+                    ->sortable(),
+
+                TextColumn::make('amount_paid')
+                    ->label('Montant versé')                    
+                    ->formatStateUsing(fn ($state): string => number_format($state, 0, ',', ' ') . ' FCFA')
+                    ->alignCenter()
+                    ->sortable(),
+
+                TextColumn::make('amount_remaining')
+                    ->label('Montant restant')                   
+                    ->formatStateUsing(fn ($state): string => number_format($state, 0, ',', ' ') . ' FCFA')
+                    ->alignCenter()
+                    ->sortable(),
+
+                // Colonne statut dynamique
+                Tables\Columns\IconColumn::make('status')
+                    ->label('Statut')
+                    ->sortable()
+                    ->alignCenter()
+                    ->boolean()           
+                    ->trueIcon('heroicon-o-check-circle')
+                    ->falseIcon('heroicon-o-x-circle')
+                    ->trueColor('success')
+                    ->falseColor('danger')
+                    ->toggleable(),
+
+                
+            ])
+            ->filters([
+                //
+                Tables\Filters\SelectFilter::make('type')
+                    ->label('Type de facture')
+                    ->options(PaymentType::getOptions()),
+                    
+                Tables\Filters\SelectFilter::make('status')
+                    ->label('Statut')
+                    ->options([
+                        '1' => 'Payé',
+                        '0' => 'Non payé',
+                    ]),
+            ])
+             ->headerActions([
+                Tables\Actions\CreateAction::make(),
+            ])
+            ->actions([
+                // Tables\Actions\Action::make('download_quittance')
+                //     ->label('Quittance')
+                //     ->icon('heroicon-o-document-check')
+                //     ->color('success')
+                //     ->visible(function (Payment $record): bool {
+                //         // Visible seulement si le paiement est complet
+                //         return $record->is_fully_paid;
+                //     })
+                //     ->action(function (Payment $record) {
+                //         return response()->redirectToRoute('documents.download-quittance', $record);
+                //     })
+                //     ->tooltip(function (Payment $record): string {
+                //         $versementsCount = $record->versement()->count();
+                        
+                //         if ($versementsCount <= 1) {
+                //             return 'Télécharger la quittance simple';
+                //         }
+                        
+                //         return "Télécharger la quittance détaillée ({$versementsCount} versements)";
+                //     }),
+                Tables\Actions\Action::make('download_quittance')
+                    ->label('Quittance')
+                    ->icon('heroicon-o-document-check')
+                    ->color('success')
+                    ->visible(fn (Payment $record): bool => $record->is_fully_paid)
+                    ->url(fn (Payment $record) => route('documents.download-quittance', $record))
+                    ->openUrlInNewTab()
+                    ->tooltip(function (Payment $record): string {
+                        $versementsCount = $record->versement()->count();
+                        
+                        return $versementsCount <= 1
+                            ? 'Télécharger la quittance simple'
+                            : "Télécharger la quittance détaillée ({$versementsCount} versements)";
+    }),
+
+                Tables\Actions\EditAction::make(),
+            // Bouton explicite pour voir les détails du locataire
+                Tables\Actions\Action::make('viewTenantDetails')
+                    ->label('Détails locataire')
+                    ->icon('heroicon-o-user')
+                    ->color('info')
+                    ->modalHeading(fn (Payment $record): string => 'Détails du locataire: ' . $record->tenant->name)
+                    ->modalContent(function (Payment $record) {
+                        // Récupérer le locataire avec la relation flat
+                        $tenant = Tenant::with('flatThroughContract')->find($record->tenant_id);
+                        $flat = $tenant->flatThroughContract?->id ?? null;
+
+                        return view('filament.resources.payment-resource.tenant-details', [
+                            'tenant' => $tenant,
+                            'flat' => $flat,
+                        ]);
+                    })
+            ])
+            ->bulkActions([
+                Tables\Actions\BulkActionGroup::make([
+                    Tables\Actions\DeleteBulkAction::make(),
+                ]),
+            ]);
+    }
+
+ /**
      * Valide le paiement quand le type change
      */
     private static function validatePaymentOnTypeChange(Get $get, Set $set, FactureService $service): void
@@ -378,192 +535,5 @@ class PaymentResource extends Resource
         self::validatePaymentOnContractChange($get, $set);
     }
 
-    public static function table(Table $table): Table
-    {
-        return $table
-            ->columns([
-                Tables\Columns\TextColumn::make('numero')
-                    ->label('Numéro de facture')
-                    ->alignCenter()
-                    ->searchable()
-                    ->sortable(),
-                    
-                Tables\Columns\TextColumn::make('type')
-                    ->label('Type')
-                    ->badge()
-                    ->alignCenter()
-                    ->formatStateUsing(fn (PaymentType $state): string => $state->getLabel())
-                    ->colors([
-                        'success' => PaymentType::LOYER->value,
-                        'warning' => PaymentType::CAUTION->value,
-                        'info' => PaymentType::COMMISSION->value,
-                    ])
-                    ->sortable(),
-
-                Tables\Columns\TextColumn::make('tenant.name')
-                    ->label('Locataire')
-                    ->searchable()
-                    ->alignCenter()
-                    ->sortable()
-                    ->toggleable()
-                    ->weight(FontWeight::Bold)
-                    ->action(
-                        Tables\Actions\Action::make('viewTenantDetails')
-                            ->label('Voir les détails')
-                            ->modalHeading(fn (Payment $record): string => 'Détails du locataire: ' . $record->tenant->name)
-                            ->modalWidth('md')
-                            ->modalContent(function (Payment $record) {
-                                $tenant = $record->tenant;
-                                
-                                return view('filament.resources.payment-resource.tenant-details', [
-                                    'tenant' => $tenant,
-                                ]);
-                            })
-                    ),
-
-                Tables\Columns\TextColumn::make('contract.contract_number')
-                    ->label('Contrat')
-                    ->alignCenter()
-                    ->placeholder('N/A')
-                    ->formatStateUsing(function ($state, $record) {
-                        if (!$record->contract) return 'N/A';
-                        
-                        $status = $record->contract->status ?? 'inconnu';
-                        $icon = match($status) {
-                            'active' => '✅',
-                            'expired' => '⏰',
-                            'terminated' => '❌',
-                            default => '📋'
-                        };
-                        
-                        return "{$state} {$icon}";
-                    })
-                    ->toggleable(),
-
-                TextColumn::make('flat.property.name')
-                    ->label('Bien immobilier')
-                    ->alignCenter()
-                    ->searchable()
-                    ->sortable()
-                    ->toggleable(),
-
-
-                TextColumn::make('current_month')
-                    ->label('Mois de')
-                    ->alignCenter()
-                    ->placeholder('N/A')
-                    ->toggleable(),
-                                    
-                TextColumn::make('amount')
-                    ->label('Montant dû')                
-                    ->formatStateUsing(fn ($state): string => number_format($state, 0, ',', ' ') . ' FCFA')
-                    ->alignCenter()
-                    ->sortable(),
-
-                TextColumn::make('amount_paid')
-                    ->label('Montant versé')                    
-                    ->formatStateUsing(fn ($state): string => number_format($state, 0, ',', ' ') . ' FCFA')
-                    ->alignCenter()
-                    ->sortable(),
-
-                TextColumn::make('amount_remaining')
-                    ->label('Montant restant')
-                    ->formatStateUsing(fn ($state): string => number_format($state, 0, ',', ' ') . ' FCFA')
-                    ->alignCenter()
-                    ->sortable(),
-
-                Tables\Columns\IconColumn::make('status')
-                    ->label('Statut')
-                    ->sortable()
-                    ->alignCenter()
-                    ->boolean()           
-                    ->trueIcon('heroicon-o-check-circle')
-                    ->falseIcon('heroicon-o-x-circle')
-                    ->trueColor('success')
-                    ->falseColor('danger')
-                    ->toggleable(),
-            ])
-            ->filters([
-                Tables\Filters\SelectFilter::make('type')
-                    ->label('Type de facture')
-                    ->options(PaymentType::getOptions()),
-                    
-                Tables\Filters\SelectFilter::make('status')
-                    ->label('Statut')
-                    ->options([
-                        '1' => 'Payé',
-                        '0' => 'Non payé',
-                    ]),
-
-                Tables\Filters\SelectFilter::make('contract_id')
-                    ->label('Contrat')
-                    ->relationship('contract', 'contract_number'),
-
-                Tables\Filters\SelectFilter::make('contract_status')
-                    ->label('Statut du contrat')
-                    ->query(function ($query, $data) {
-                        if ($data['value']) {
-                            $query->whereHas('contract', function ($q) use ($data) {
-                                $q->where('status', $data['value']);
-                            });
-                        }
-                    })
-                    ->options([
-                        'active' => 'Actif',
-                        'expired' => 'Expiré',
-                        'terminated' => 'Terminé',
-                    ]),
-            ])
-            ->actions([
-                Tables\Actions\Action::make('download_quittance')
-                    ->label('Quittance')
-                    ->icon('heroicon-o-document-check')
-                    ->color('success')
-                    ->visible(fn (Payment $record): bool => $record->is_fully_paid)
-                    ->url(fn (Payment $record) => route('documents.download-quittance', $record))
-                    ->openUrlInNewTab(),
-
-                Tables\Actions\EditAction::make(),
-                      // Bouton explicite pour voir les détails du locataire
-                Tables\Actions\Action::make('viewTenantDetails')
-                    ->label('Détails locataire')
-                    ->icon('heroicon-o-user')
-                    ->color('info')
-                    ->modalHeading(fn (Payment $record): string => 'Détails du locataire: ' . $record->tenant->name)
-                    ->modalContent(function (Payment $record) {
-                        // Récupérer le locataire avec la relation flat
-                        // $tenant = Tenant::with('flatThroughContract')->find($record->tenant_id);
-                        // $flat = $tenant->flatThroughContract? ?? null;
-                        $tenant = Tenant::with('flatThroughContract')->find($record->tenant_id);
-                        $flat = $tenant->flatThroughContract ?? null;
-
-                        
-                        return view('filament.resources.payment-resource.tenant-details', [
-                            'tenant' => $tenant,
-                            'flat' => $flat,
-                        ]);
-                    })
-            ])
-            ->bulkActions([
-                Tables\Actions\BulkActionGroup::make([
-                    Tables\Actions\DeleteBulkAction::make(),
-                ]),
-            ]);
-    }
-
-    public static function getRelations(): array
-    {
-        return [
-            VersementRelationManager::class,
-        ];
-    }
-
-    public static function getPages(): array
-    {
-        return [
-            'index' => Pages\ListPayments::route('/'),
-            'create' => Pages\CreatePayment::route('/create'),
-            'edit' => Pages\EditPayment::route('/{record}/edit'),
-        ];
-    }
 }
+

@@ -4,6 +4,8 @@ namespace App\Models;
 
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
+use App\Enums\PropertyType;
+use App\Enums\CommissionUnit;
 
 class Property extends Model
 {
@@ -16,6 +18,10 @@ class Property extends Model
         'number_flat',
         'commission_value',
         'commission_unit',
+    ];
+     protected $casts = [
+        'type' => PropertyType::class,
+        'commission_unit' => CommissionUnit::class
     ];
 
     public function flats()

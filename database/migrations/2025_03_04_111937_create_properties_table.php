@@ -13,12 +13,13 @@ return new class extends Migration
     {
         Schema::create('properties', function (Blueprint $table) {
             $table->id();
+            $table->foreignId('owner_id')->nullable()->constrained()->cascadeOnDelete();
             $table->string('name');
             $table->string('address');
-            $table->enum('type', ['Immeuble', 'Villa', 'Commerce']);
-            $table->integer('number_flat');
+            $table->string('type');
+            $table->integer('number_flat')->nullable();
             $table->decimal('commission_value',13,0)->nullable();
-            $table->enum('commission_unit', ['%', 'F CFA']);
+            $table->string('commission_unit');
             $table->timestamps();
         });
     }

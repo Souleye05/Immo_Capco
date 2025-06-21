@@ -2,6 +2,8 @@
 
 namespace App\Providers\Filament;
 
+use App\Filament\Resources\ContractResource\Widgets\ContractStatsWidget;
+use App\Filament\Widgets\ContractChartWidget;
 use App\Filament\Widgets\EtatDesFacturesChart;
 use App\Filament\Widgets\KpiStats;
 use App\Filament\Widgets\RevenusChart;
@@ -49,11 +51,13 @@ class AdminPanelProvider extends PanelProvider
             ->widgets([
                 // Widgets\AccountWidget::class,
                 // Widgets\FilamentInfoWidget::class,
+                ContractStatsWidget::class,
                 KpiStats::class,
                 TypesDeBiensChart::class,
                 EtatDesFacturesChart::class,
                 RevenusChart::class,
                 RevenusVsDepensesChart::class,
+                ContractChartWidget::class,
                 
             ])
             ->middleware([

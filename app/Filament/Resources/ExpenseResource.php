@@ -2,6 +2,7 @@
 
 namespace App\Filament\Resources;
 
+use App\Enums\PropertyType;
 use App\Models\CategorieDepense;
 use App\Models\DepenseType;
 use App\Models\Prestataire;
@@ -52,11 +53,7 @@ class ExpenseResource extends Resource
                                 // Formulaire de création de propriété inchangé
                                 Select::make('type')
                                     ->label('Type de propriété')
-                                    ->options([
-                                        'Immeuble' => 'Immeuble',
-                                        'Villa' => 'Villa',
-                                        'Commerce' => 'Commerce'
-                                    ])
+                                    ->options(PropertyType::getOptions())
                                     ->required(),
                                 TextInput::make('name')
                                     ->label('Nom & Prénoms')
@@ -104,7 +101,12 @@ class ExpenseResource extends Resource
                                     return [];
                                 }
                         
-                                return $property->flats->pluck('type', 'id')->toArray();
+                                return $property->flats->mapWithKeys(function ($flat) {
+                                    $label = $flat->type->label();
+                                    return [
+                                        $flat->id => $label,
+                                    ];
+                                })->toArray();
                             })
                             ->searchable()
                             ->hint('Sélectionnez l\'appartement concerné')

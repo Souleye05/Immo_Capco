@@ -91,11 +91,11 @@ class FlatRepository
         $totalCommissions = 0;
         
         foreach ($payments as $payment) {
-            $totalCommissions += $this->calculateCommission($payment->flat, $payment->amount);
+            $totalCommissions += $this->calculateCommission($payment->flatThroughContract?->id, $payment->amount);
         }
         
         return $totalCommissions;
-    }
+    }       
 
     // Récupéré les les loyers pour chaque appartement
     /**
