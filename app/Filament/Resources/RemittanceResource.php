@@ -122,32 +122,32 @@ class RemittanceResource extends Resource
                     ->required()
                     ->visible(fn (callable $get) => $get('remittance_type') === 'caution')
                     ->rule(function ($get) {
-    return function (string $attribute, $value, Closure $fail) use ($get) {
-        $remittanceType = $get('remittance_type');
-        $propertyId = $get('property_id');
+                            return function (string $attribute, $value, Closure $fail) use ($get) {
+                                $remittanceType = $get('remittance_type');
+                                $propertyId = $get('property_id');
 
-        if ($remittanceType === 'caution' && $propertyId && $value) {
-            // Vérifier s’il y a un reversement de caution pour ce locataire via la property
-            $remittanceExists = Remittance::where('property_id', $propertyId)
-                ->where('remittance_type', 'caution')
-                ->whereHas('property.flats.contracts.tenant', function ($query) use ($value) {
-                    $query->where('id', $value); // $value = tenant_id sélectionné
-                })
-                ->exists();
+                                if ($remittanceType === 'caution' && $propertyId && $value) {
+                                    // Vérifier s’il y a un reversement de caution pour ce locataire via la property
+                                    $remittanceExists = Remittance::where('property_id', $propertyId)
+                                        ->where('remittance_type', 'caution')
+                                        ->whereHas('property.flats.contracts.tenant', function ($query) use ($value) {
+                                            $query->where('id', $value); // $value = tenant_id sélectionné
+                                        })
+                                        ->exists();
 
-            if ($remittanceExists) {
-                // Un reversement de caution existe déjà pour ce locataire
-                Notification::make()
-                    ->title('Erreur de validation')
-                    ->body('Un reversement de caution existe déjà pour ce locataire.')
-                    ->danger()
-                    ->persistent()
-                    ->send();
-                $fail('Un reversement de caution existe déjà pour ce locataire dans ce bien.');
-            }
-        }
-    };
-})
+                                    if ($remittanceExists) {
+                                        // Un reversement de caution existe déjà pour ce locataire
+                                        Notification::make()
+                                            ->title('Erreur de validation')
+                                            ->body('Un reversement de caution existe déjà pour ce locataire.')
+                                            ->danger()
+                                            ->persistent()
+                                            ->send();
+                                        $fail('Un reversement de caution existe déjà pour ce locataire dans ce bien.');
+                                    }
+                                }
+                            };
+                        })
 
                     ->afterStateUpdated(function ($state, callable $set, callable $get) {
                         $remittanceType = $get('remittance_type');
