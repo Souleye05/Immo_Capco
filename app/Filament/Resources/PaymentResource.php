@@ -172,13 +172,16 @@ class PaymentResource extends Resource
                             ->mapWithKeys(function ($contract) {
                                 $label = $contract->contract_number ?? "Contrat #{$contract->id}";
                                 $status = $contract->status ?? 'inconnu';
+                                $property = $contract->property->name ?? 'Inconnu';
+                        
+                                $flat = $contract->flat->level ?? 'Inconnu';
                                 $statusLabel = match($status) {
                                     'active' => '✅ Actif',
                                     'expired' => '⏰ Expiré', 
                                     'terminated' => '❌ Terminé',
                                     default => "📋 Actif"
                                 };
-                                return [$contract->id => "{$label} - {$statusLabel}"];
+                                return [$contract->id => "{$label} - {$statusLabel} ({$property} - {$flat})"];
                             })
                             ->toArray();
                     })
