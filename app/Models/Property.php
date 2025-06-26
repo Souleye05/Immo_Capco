@@ -46,6 +46,6 @@ class Property extends Model
 
     public function getFullNameAttribute()
     {
-        return $this->type . ' - ' . $this->name;
+        return $this->type->value . ' - ' . $this->name;
     }
 }

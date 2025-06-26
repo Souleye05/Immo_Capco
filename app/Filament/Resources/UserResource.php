@@ -50,7 +50,12 @@ class UserResource extends Resource
                     ->password()
                     ->label('Confirmer mot de passe')
                     ->minLength(8)
-                    ->dehydrated(false)
+                    ->dehydrated(false),
+                Forms\Components\Select::make('roles')
+                    ->relationship('roles', 'name')
+                    ->multiple()
+                    ->preload()
+                    ->searchable(),
             ]);
     }
 

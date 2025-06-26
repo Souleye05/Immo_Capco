@@ -64,12 +64,14 @@ class ContractResource extends Resource
 
                                         $activeContract = Contract::where('tenant_id', $state)
                                             ->where('status', ContractStatus::ACTIVE)
+                                            ->with('flat')
                                             ->first();
 
                                         if ($activeContract) {
+                                            $flatName = $activeContract->flat?->type->value;
                                             Notification::make()
                                                 ->title('Attention')
-                                                ->body("Ce locataire a déjà un contrat actif du {$activeContract->start_date->format('d/m/Y')} au {$activeContract->end_date->format('d/m/Y')} dans l'appartement {$activeContract->flatThroughContract?->type->label()}.")
+                                                ->body("Ce locataire a déjà un contrat actif du {$activeContract->start_date->format('d/m/Y')} au {$activeContract->end_date->format('d/m/Y')} dans l'appartement {$flatName}.")
                                                 ->warning()
                                                 ->send();
                                         }
@@ -124,6 +126,11 @@ class ContractResource extends Resource
                                         ->get()
                                        ->mapWithKeys(function ($flat) {
                                             $label = $flat->type->label(); 
+
+                                            if ($flat->level) {
+                                                $label .= ' - Niveau: ' . $flat->level;
+                                            }
+
 
                                             if ($flat->monthly_rent) {
                                                 $label .= ' - ' . number_format($flat->monthly_rent) . ' FCFA';

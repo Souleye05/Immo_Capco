@@ -34,9 +34,9 @@ class RemittancePartialRelationManager extends RelationManager
                 TextInput::make('reference')
                     ->label('Référence du paiement')
                     ->required()
-                    ->maxLength(255)
+                    ->dehydrated()
+                    ->disabled()
                     ->default(fn () => 'PAY-' . random_int(100000, 999999)),
-
                 // TextInput::make('amount')
                 //     ->label('Montant du versement')
                 //     ->numeric()

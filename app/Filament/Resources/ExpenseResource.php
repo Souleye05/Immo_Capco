@@ -103,6 +103,10 @@ class ExpenseResource extends Resource
                         
                                 return $property->flats->mapWithKeys(function ($flat) {
                                     $label = $flat->type->label();
+
+                                    if ($flat->level) {
+                                        $label .= " ({$flat->level})";
+                                    }
                                     return [
                                         $flat->id => $label,
                                     ];
