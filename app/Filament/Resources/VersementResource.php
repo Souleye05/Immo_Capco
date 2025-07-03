@@ -2,6 +2,7 @@
 
 namespace App\Filament\Resources;
 
+use App\Enums\PaymentType;
 use App\Filament\Resources\VersementResource\Pages;
 use App\Models\Versement;
 use App\Services\VersementService;
@@ -33,20 +34,29 @@ class VersementResource extends Resource
                 Tables\Columns\TextColumn::make('reference')
                     ->searchable()
                     ->sortable(),
+                Tables\Columns\TextColumn::make('payment.type')
+                    ->label('Type de facture')
+                    ->sortable()
+                    ->badge()
+                    ->alignCenter(),
 
+                Tables\Columns\TextColumn::make('payment.numero')
+                        ->searchable()
+                        ->alignCenter()
+                        ->sortable()
+                        ->label('Facture'),
+                Tables\Columns\TextColumn::make('payment.tenant.name')
+                    ->label('Client')
+                    ->searchable()
+                    ->sortable()
+                    ->alignCenter(),
                 Tables\Columns\TextColumn::make('amount')
                     ->label('Montant')
                     ->alignCenter()
                     ->formatStateUsing(fn ($state) => number_format($state, 0, ',', ' ') . ' FCFA'),
-
-                Tables\Columns\TextColumn::make('payment.numero')
-                    ->searchable()
-                    ->alignCenter()
-                    ->sortable()
-                    ->label('Facture'),
-
+                    
                 Tables\Columns\TextColumn::make('versement_date')
-                    ->label('Date')
+                    ->label('Date de versement')
                     ->alignCenter()
                     ->date(),
 

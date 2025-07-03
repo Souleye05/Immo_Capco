@@ -20,6 +20,7 @@ use Illuminate\Console\Scheduling\Schedule;
 use Illuminate\Support\Facades\Blade;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\ServiceProvider;
+use Spatie\Browsershot\Browsershot;
 
 class AppServiceProvider extends ServiceProvider
 {
@@ -48,6 +49,8 @@ class AppServiceProvider extends ServiceProvider
      */
     public function boot(): void
     {
+        // Browsershot::setNodeBinary('/usr/bin/node');
+        // Browsershot::setChromePath('/usr/bin/google-chrome'); // Chemin vers le binaire Node.js
         // $this->callAfterResolving(Schedule::class, function (Schedule $schedule) {
         //     // Définissez vos tâches planifiées ici
         //     $schedule->command('invoices:generate-monthly')->monthlyOn(1, '00:00'); // 1er du mois à 00:00

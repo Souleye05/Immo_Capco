@@ -16,7 +16,7 @@ class ListOwners extends ListRecords
             Actions\CreateAction::make()
                 ->label('Nouveau propriétaire')
                 ->icon('heroicon-o-plus')
-                ->color('info'),
+                ,
         ];
     }
     public function getTitle(): string

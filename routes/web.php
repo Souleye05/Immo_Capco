@@ -47,3 +47,6 @@ Route::get('/contracts/{contract}/pdf', [ContractPdfController::class, 'generate
 Route::get('/contracts/{contract}/pdf/view', [ContractPdfController::class, 'viewPdf'])
     ->name('contracts.pdf.view');
 
+    Route::get('/documents/facture/{payment}', [DocumentController::class, 'downloadFacture'])
+    ->name('documents.download-facture');
+

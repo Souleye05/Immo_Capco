@@ -21,7 +21,7 @@ class ListProspects extends ListRecords
             Actions\CreateAction::make()
                 ->label('Nouveau prospect')
                 ->icon('heroicon-o-plus')
-                ->color('info'),
+                ,
         ];
     }
 

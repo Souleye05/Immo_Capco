@@ -17,7 +17,7 @@ class ListExpenses extends ListRecords
             Actions\CreateAction::make()
                 ->label('Nouvelle Dépense')
                 ->icon('heroicon-o-plus')
-                ->color('info'),
+                ,
         ];
     }
 

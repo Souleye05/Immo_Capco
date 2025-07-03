@@ -104,7 +104,7 @@ class ListPayments extends ListRecords
             Actions\CreateAction::make()
                 ->label('Nouvelle facture')
                 ->icon('heroicon-o-plus')
-                ->color('info'),
+                ,
             Actions\Action::make('GenerateMonthlyPayments')
                 ->label('Générer les factures du mois')
                 ->icon('heroicon-o-document-text')

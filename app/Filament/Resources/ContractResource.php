@@ -301,7 +301,7 @@ public static function table(Table $table): Table
                     ->sortable()
                     ->copyable(),
                 Tables\Columns\TextColumn::make('flat.property.name')
-                    ->label('Propriété')
+                    ->label('Propriété(Immeuble)')
                     ->searchable()
                     ->alignCenter()
                     ->sortable(),

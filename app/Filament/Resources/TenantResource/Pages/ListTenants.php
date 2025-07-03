@@ -21,7 +21,7 @@ class ListTenants extends ListRecords
             Actions\CreateAction::make()
                 ->label('Ajouter locataire')
                 ->icon('heroicon-o-plus')
-                ->color('info'),
+                ,
         ];
     }
 

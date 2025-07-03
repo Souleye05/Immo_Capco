@@ -3,6 +3,7 @@
 namespace App\Repositories;
 
 use App\Enums\PaymentType;
+use App\Models\Flat;
 use App\Models\Payment;
 use Illuminate\Database\Eloquent\Collection;
 use Illuminate\Support\Carbon;
@@ -175,4 +176,45 @@ public function getPaymentsByFlatAndType(int $flatId, PaymentType $type)
 }
 
     
+/**
+     * Récupère le loyer courant d'un flat
+     */
+public function getCurrentLoyerByFlat(Flat $flat): int
+{
+    return $flat->loyer ?? 0; // Retourne 0 si le loyer n'est pas défini
+}
+
+/**
+     * Calcule les arriérés de paiement avant un mois donné
+     */
+public function getArrears(int $tenantId, int $flatId, string $month): int
+{
+    $payments = Payment::where('tenant_id', $tenantId)
+        ->where('flat_id', $flatId)
+        ->where('type', PaymentType::LOYER)
+        ->where('current_month', '<', $month)
+        ->where('status', 0) // Seulement les paiements non payés
+        ->get();
+
+    return $payments->sum(function ($payment) {
+        return $payment->amount - $payment->amount_paid;
+    });
+}
+/**
+     * Calcule le total à payer = loyer + arriérés
+     */
+public function getTotalToPay(int $loyer, int $arrears): int
+{
+    return $loyer + $arrears;
+}
+
+/**
+     * Calcule le montant restant
+     */
+
+public function getRemainingAmount(int $montantTotal, int $montantVerse): int
+{
+    return max(0, $montantTotal - $montantVerse);
+
+}
 }

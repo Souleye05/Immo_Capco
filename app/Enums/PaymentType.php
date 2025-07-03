@@ -55,4 +55,35 @@ enum PaymentType: string
             self::CAUTION => 'Mois', // Non utilisé
         };
     }
+    public function getQuittanceLabel(): string
+    {
+        return match($this) {
+            self::LOYER => 'LOYER',
+            self::CAUTION => 'CAUTION',
+            self::COMMISSION => 'COMMISSION',
+            default => 'Facture',
+            
+        };
+    }
+
+    public function getLabelLignePrincipale(): string
+{
+    return match ($this) {
+        self::LOYER => 'Loyer pour la période',
+        self::CAUTION => 'Montant de la caution',
+        self::COMMISSION => 'Frais de commission',
+        default => 'Montant dû',
+    };
+}
+
+public function getLabelPaiementEffectue(): string
+{
+    return match ($this) {
+        self::LOYER => 'Paiement effectué',
+        self::CAUTION => 'Caution versée',
+        self::COMMISSION => 'Commission réglée',
+        default => 'Montant payé',
+    };
+}
+
 }

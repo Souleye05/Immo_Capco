@@ -9,7 +9,9 @@ use App\Models\Payment;
 use App\Models\Flat;
 use App\Models\Tenant;
 use App\Models\Contract;
+use App\Services\DocumentGeneratorService;
 use App\Services\FactureService;
+use Carbon\Carbon;
 use Coolsam\FilamentFlatpickr\Forms\Components\Flatpickr;
 use Filament\Forms;
 use Filament\Forms\Form;
@@ -50,7 +52,7 @@ class PaymentResource extends Resource
                         if (!$state) return;
 
                         $type = PaymentType::from($state);
-                        
+
                         // Générer le numéro selon le type
                         $service = app(FactureService::class);
                         $set('numero', $service->generateUniqueNumero($type));
@@ -70,11 +72,11 @@ class PaymentResource extends Resource
                         self::validatePaymentOnTypeChange($get, $set, $service);
                     }),
 
-                    TextInput::make('numero')
-                        ->label('Numéro de facture')
-                        ->disabled()
-                        ->dehydrated(true)
-                        ->required(),
+                TextInput::make('numero')
+                    ->label('Numéro de facture')
+                    ->disabled()
+                    ->dehydrated(true)
+                    ->required(),
 
                 Select::make('tenant_id')
                     ->label('Locataire')
@@ -117,29 +119,29 @@ class PaymentResource extends Resource
                         if ($tenant && $tenant->flatThroughContract) {
                             $set('flat_id', $tenant->flatThroughContract->id);
                             $set('contract_id', null);
-                            
+
                             // Calculer le montant selon le type sélectionné
                             $typeValue = $get('type');
                             if ($typeValue) {
                                 $type = PaymentType::from($typeValue);
                                 $service = app(FactureService::class);
-                                
+
                                 // Vérification de base (caution)
                                 $validation = $service->canCreatePayment($type, $tenant->id, $tenant->flatThroughContract->id);
-                                
+
                                 if (!$validation['can_create']) {
                                     Notification::make()
                                         ->warning()
                                         ->title('Attention')
                                         ->body($validation['message'])
                                         ->send();
-                                    
+
                                     $set('tenant_id', null);
                                     $set('flat_id', null);
                                     $set('contract_id', null);
                                     return;
                                 }
-                                
+
                                 $amount = $service->calculateAmountByType($type, $tenant->flatThroughContract);
                                 $set('amount', $amount);
                                 $set('amount_remaining', $amount);
@@ -151,7 +153,7 @@ class PaymentResource extends Resource
                             $set('amount_remaining', 0);
                         }
                     }),
-                    
+
                 Select::make('flat_id')
                     ->label('Appartement')
                     ->relationship('flat', 'reference')
@@ -166,18 +168,18 @@ class PaymentResource extends Resource
                     ->options(function (Get $get) {
                         $tenantId = $get('tenant_id');
                         if (!$tenantId) return [];
-                        
+
                         return Contract::where('tenant_id', $tenantId)
                             ->get()
                             ->mapWithKeys(function ($contract) {
                                 $label = $contract->contract_number ?? "Contrat #{$contract->id}";
                                 $status = $contract->status ?? 'inconnu';
                                 $property = $contract->property->name ?? 'Inconnu';
-                        
+
                                 $flat = $contract->flat->level ?? 'Inconnu';
-                                $statusLabel = match($status) {
+                                $statusLabel = match ($status) {
                                     'active' => '✅ Actif',
-                                    'expired' => '⏰ Expiré', 
+                                    'expired' => '⏰ Expiré',
                                     'terminated' => '❌ Terminé',
                                     default => "📋 Actif"
                                 };
@@ -185,32 +187,32 @@ class PaymentResource extends Resource
                             })
                             ->toArray();
                     })
-                    ->disabled(fn (Get $get): bool => !$get('tenant_id'))
+                    ->disabled(fn(Get $get): bool => !$get('tenant_id'))
                     ->helperText(function (Get $get): string {
                         if (!$get('tenant_id')) {
                             return 'Sélectionnez d\'abord un locataire';
                         }
-                        
+
                         $tenantId = $get('tenant_id');
                         $contractsCount = Contract::where('tenant_id', $tenantId)->count();
-                        
+
                         if ($contractsCount === 0) {
                             return '⚠️ Aucun contrat trouvé pour ce locataire';
                         }
-                        
+
                         $activeCount = Contract::where('tenant_id', $tenantId)
                             ->where('status', 'active')
                             ->count();
-                            return "📋 {$contractsCount} contrat(s) disponible(s) dont {$activeCount} actif(s)";
+                        return "📋 {$contractsCount} contrat(s) disponible(s) dont {$activeCount} actif(s)";
                     })
                     ->placeholder('Sélectionnez un contrat')
                     ->afterStateUpdated(function ($state, Set $set, Get $get) {
                         if (!$state) return;
-                        
+
                         $contract = Contract::find($state);
                         if ($contract) {
                             // Notification selon le statut du contrat
-                            match($contract->status) {
+                            match ($contract->status) {
                                 'active' => Notification::make()
                                     ->success()
                                     ->title('Contrat actif sélectionné')
@@ -241,7 +243,7 @@ class PaymentResource extends Resource
                         $contractId = $get('contract_id');
                         $month = $get('current_month');
                         $type = $get('type');
-                        
+
                         if (!$contractId || !$month || !$type) {
                             return 'Sélectionnez un contrat et un mois pour voir les informations.';
                         }
@@ -249,21 +251,21 @@ class PaymentResource extends Resource
                         $service = app(FactureService::class);
                         $paymentType = PaymentType::from($type);
                         $validation = $service->validatePaymentCreation($paymentType, $contractId, $month);
-                        
+
                         if (!empty($validation['existing_payments'])) {
                             $list = collect($validation['existing_payments'])
                                 ->map(fn($p) => "• {$p['type']} (N° {$p['numero']}) - " . number_format($p['amount'], 0, ',', ' ') . ' FCFA')
                                 ->implode("\n");
-                                
+
                             return "Factures existantes pour ce mois :\n{$list}";
                         }
-                        
+
                         return 'Aucune facture existante pour ce mois.';
                     })
                     ->visible(function (Get $get): bool {
                         return $get('contract_id') && $get('current_month') && $get('type');
                     }),
-                
+
                 TextInput::make('amount')
                     ->label('Montant')
                     ->numeric()
@@ -326,12 +328,12 @@ class PaymentResource extends Resource
         $contractId = $get('contract_id');
         $month = $get('current_month');
         $type = $get('type');
-        
+
         if (!$contractId || !$month || !$type) return;
-        
+
         $paymentType = PaymentType::from($type);
         $validation = $service->validatePaymentCreation($paymentType, $contractId, $month);
-        
+
         if (!$validation['can_create']) {
             Notification::make()
                 ->danger()
@@ -350,13 +352,13 @@ class PaymentResource extends Resource
         $contractId = $get('contract_id');
         $month = $get('current_month');
         $type = $get('type');
-        
+
         if (!$contractId || !$month || !$type) return;
-        
+
         $service = app(FactureService::class);
         $paymentType = PaymentType::from($type);
         $validation = $service->validatePaymentCreation($paymentType, $contractId, $month);
-        
+
         if (!$validation['can_create']) {
             Notification::make()
                 ->danger()
@@ -390,12 +392,12 @@ class PaymentResource extends Resource
                     ->alignCenter()
                     ->searchable()
                     ->sortable(),
-                    
+
                 Tables\Columns\TextColumn::make('type')
                     ->label('Type')
                     ->badge()
                     ->alignCenter()
-                    ->formatStateUsing(fn (PaymentType $state): string => $state->getLabel())
+                    ->formatStateUsing(fn(PaymentType $state): string => $state->getLabel())
                     ->colors([
                         'success' => PaymentType::LOYER->value,
                         'warning' => PaymentType::CAUTION->value,
@@ -413,11 +415,11 @@ class PaymentResource extends Resource
                     ->action(
                         Tables\Actions\Action::make('viewTenantDetails')
                             ->label('Voir les détails')
-                            ->modalHeading(fn (Payment $record): string => 'Détails du locataire: ' . $record->tenant->name)
+                            ->modalHeading(fn(Payment $record): string => 'Détails du locataire: ' . $record->tenant->name)
                             ->modalWidth('md')
                             ->modalContent(function (Payment $record) {
                                 $tenant = $record->tenant;
-                                
+
                                 return view('filament.resources.payment-resource.tenant-details', [
                                     'tenant' => $tenant,
                                 ]);
@@ -430,15 +432,15 @@ class PaymentResource extends Resource
                     ->placeholder('N/A')
                     ->formatStateUsing(function ($state, $record) {
                         if (!$record->contract) return 'N/A';
-                        
+
                         $status = $record->contract->status ?? 'inconnu';
-                        $icon = match($status) {
+                        $icon = match ($status) {
                             'active' => '✅',
                             'expired' => '⏰',
                             'terminated' => '❌',
                             default => '📋'
                         };
-                        
+
                         return "{$state} {$icon}";
                     })
                     ->toggleable(),
@@ -454,24 +456,26 @@ class PaymentResource extends Resource
                 TextColumn::make('current_month')
                     ->label('Mois de')
                     ->alignCenter()
+                    ->sortable()
                     ->placeholder('N/A')
+                    ->formatStateUsing(fn($state): string => Carbon::createFromFormat('Y-m', $state)->translatedFormat('F Y'))
                     ->toggleable(),
-                                    
+
                 TextColumn::make('amount')
-                    ->label('Montant dû')                
-                    ->formatStateUsing(fn ($state): string => number_format($state, 0, ',', ' ') . ' FCFA')
+                    ->label('Montant dû')
+                    ->formatStateUsing(fn($state): string => number_format($state, 0, ',', ' ') . ' FCFA')
                     ->alignCenter()
                     ->sortable(),
 
                 TextColumn::make('amount_paid')
-                    ->label('Montant versé')                    
-                    ->formatStateUsing(fn ($state): string => number_format($state, 0, ',', ' ') . ' FCFA')
+                    ->label('Montant versé')
+                    ->formatStateUsing(fn($state): string => number_format($state, 0, ',', ' ') . ' FCFA')
                     ->alignCenter()
                     ->sortable(),
 
                 TextColumn::make('amount_remaining')
                     ->label('Montant restant')
-                    ->formatStateUsing(fn ($state): string => number_format($state, 0, ',', ' ') . ' FCFA')
+                    ->formatStateUsing(fn($state): string => number_format($state, 0, ',', ' ') . ' FCFA')
                     ->alignCenter()
                     ->sortable(),
 
@@ -479,7 +483,7 @@ class PaymentResource extends Resource
                     ->label('Statut')
                     ->sortable()
                     ->alignCenter()
-                    ->boolean()           
+                    ->boolean()
                     ->trueIcon('heroicon-o-check-circle')
                     ->falseIcon('heroicon-o-x-circle')
                     ->trueColor('success')
@@ -487,10 +491,27 @@ class PaymentResource extends Resource
                     ->toggleable(),
             ])
             ->filters([
+                Tables\Filters\SelectFilter::make('current_month')
+                    ->label('Mois concerné')
+                    ->options(function () {
+                        return Payment::query()
+                            ->whereNotNull('current_month')
+                            ->select('current_month')
+                            ->distinct()
+                            ->orderByDesc('current_month')
+                            ->pluck('current_month')
+                            ->filter(fn ($val) => preg_match('/^\d{4}-\d{2}$/', $val)) // sécurité : Y-m uniquement
+                            ->mapWithKeys(fn ($value) => [
+                                $value => \Carbon\Carbon::createFromFormat('Y-m', $value)->translatedFormat('F Y')
+                            ])
+                            ->toArray();
+                    }),
+
+
                 Tables\Filters\SelectFilter::make('type')
                     ->label('Type de facture')
                     ->options(PaymentType::getOptions()),
-                    
+
                 Tables\Filters\SelectFilter::make('status')
                     ->label('Statut')
                     ->options([
@@ -518,35 +539,43 @@ class PaymentResource extends Resource
                     ]),
             ])
             ->actions([
-                Tables\Actions\Action::make('download_quittance')
-                    ->label('Quittance')
-                    ->icon('heroicon-o-document-check')
-                    ->color('success')
-                    ->visible(fn (Payment $record): bool => $record->is_fully_paid)
-                    ->url(fn (Payment $record) => route('documents.download-quittance', $record))
-                    ->openUrlInNewTab(),
+    Tables\Actions\ActionGroup::make([
+        Tables\Actions\EditAction::make(),
 
-                Tables\Actions\EditAction::make(),
-                      // Bouton explicite pour voir les détails du locataire
-                Tables\Actions\Action::make('viewTenantDetails')
-                    ->label('Détails locataire')
-                    ->icon('heroicon-o-user')
-                    ->color('info')
-                    ->modalHeading(fn (Payment $record): string => 'Détails du locataire: ' . $record->tenant->name)
-                    ->modalContent(function (Payment $record) {
-                        // Récupérer le locataire avec la relation flat
-                        // $tenant = Tenant::with('flatThroughContract')->find($record->tenant_id);
-                        // $flat = $tenant->flatThroughContract? ?? null;
-                        $tenant = Tenant::with('flatThroughContract')->find($record->tenant_id);
-                        $flat = $tenant->flatThroughContract ?? null;
+      Tables\Actions\Action::make('facture_loyer')
+    ->label('Facture')
+    ->icon('heroicon-o-document-text')
+    ->color('primary')
+    ->visible(fn(Payment $record): bool => 
+        app(DocumentGeneratorService::class)->canGenerateFacture($record)
+    )
+    ->url(fn(Payment $record) => route('documents.download-facture', $record))
+    ->openUrlInNewTab(),
+        Tables\Actions\Action::make('download_quittance')
+            ->label('Quittance')
+            ->icon('heroicon-o-document-check')
+            ->color('success')
+            ->visible(fn(Payment $record): bool => $record->is_fully_paid)
+            ->url(fn(Payment $record) => route('documents.download-quittance', $record))
+            ->openUrlInNewTab(),
 
-                        
-                        return view('filament.resources.payment-resource.tenant-details', [
-                            'tenant' => $tenant,
-                            'flat' => $flat,
-                        ]);
-                    })
-            ])
+        Tables\Actions\Action::make('viewTenantDetails')
+            ->label('Détails locataire')
+            ->icon('heroicon-o-user')
+            ->color('info')
+            ->modalHeading(fn(Payment $record): string => 'Détails du locataire: ' . $record->tenant->name)
+            ->modalContent(function (Payment $record) {
+                $tenant = Tenant::with('flatThroughContract')->find($record->tenant_id);
+                $flat = $tenant->flatThroughContract ?? null;
+
+                return view('filament.resources.payment-resource.tenant-details', [
+                    'tenant' => $tenant,
+                    'flat' => $flat,
+                ]);
+            }),
+    ]),
+])
+
             ->bulkActions([
                 Tables\Actions\BulkActionGroup::make([
                     Tables\Actions\DeleteBulkAction::make(),

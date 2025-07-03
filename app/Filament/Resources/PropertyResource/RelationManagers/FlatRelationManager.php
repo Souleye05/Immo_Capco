@@ -36,6 +36,10 @@ class FlatRelationManager extends RelationManager
                     ->searchable()
                     ->sortable()
                     ->alignCenter(), // Centrer la colonne
+                Tables\Columns\TextColumn::make('type')
+                    ->label('Propriété (Immeuble)')
+                    ->alignCenter() // Centrer la colonne
+                    ->sortable(),
                 Tables\Columns\TextColumn::make('current_tenant_name')
                     ->label('Locataire actuel')
                     ->getStateUsing(function ($record) {

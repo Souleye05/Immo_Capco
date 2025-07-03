@@ -18,7 +18,7 @@ class ListRemittances extends ListRecords
             Actions\CreateAction::make()
                 ->label('Nouveau Reversement')
                 ->icon('heroicon-o-plus')
-                ->color('info'),
+                ,
             
         ];
     }

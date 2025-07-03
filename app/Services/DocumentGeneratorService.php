@@ -2,13 +2,24 @@
 
 namespace App\Services;
 
+use App\Enums\PaymentType;
 use App\Models\Payment;
 use App\Models\Versement;
-use Barryvdh\DomPDF\Facade\Pdf;
+use App\Repositories\PaymentRepository;
+// use Barryvdh\DomPDF\Facade\Pdf;
+use Barryvdh\Snappy\Facades\SnappyPdf; 
 use Illuminate\Support\Carbon;
+use Spatie\Browsershot\Browsershot;
 
 class DocumentGeneratorService
 {
+    protected $paymentRepository;
+    public function __construct(
+        PaymentRepository $paymentRepository,
+    )
+    {
+        $this->paymentRepository = $paymentRepository;
+    }
     const DOCUMENT_TYPE_QUITTANCE_SIMPLE = 'quittance_simple';
     const DOCUMENT_TYPE_QUITTANCE_DETAILLEE = 'quittance_detaillee';
     const DOCUMENT_TYPE_RECU = 'recu';
@@ -47,7 +58,7 @@ class DocumentGeneratorService
         $data['total_versements'] = $versements->sum('amount');
         $data['nombre_versements'] = $versements->count();
         
-        return $this->generatePdf('pdfs.quittance_detaillee', $data);
+        return $this->generatePdf('pdfs.quittance_simple', $data);
     }
 
     /**
@@ -68,6 +79,70 @@ class DocumentGeneratorService
         
         return $this->generatePdf('pdfs.recu', $data);
     }
+/**
+ * Vérifier si une facture peut être générée pour ce paiement
+ */
+public function canGenerateFacture(Payment $payment): bool
+{
+    // Vérifier le type
+    if ($payment->type !== PaymentType::LOYER) {
+        return false;
+    }
+    
+    try {
+        $flat = $payment->flat;
+        $tenant = $payment->tenant;
+        
+        $loyer = $this->paymentRepository->getCurrentLoyerByFlat($flat);
+        $arrieres = $this->paymentRepository->getArrears($tenant->id, $flat->id, $payment->current_month);
+        $montantTotal = $this->paymentRepository->getTotalToPay($loyer, $arrieres);
+        
+        // Vérifier s'il y a des montants à payer
+        if ($montantTotal <= 0) {
+            return false;
+        }
+        
+        // Vérifier si le tenant a des arriérés OU si c'est le mois actuel/futur
+        $hasArrieres = $arrieres > 0;
+        $isCurrentMonth = $this->isCurrentOrFutureMonth($payment->current_month);
+        
+        return $hasArrieres || $isCurrentMonth;
+        
+    } catch (\Exception $e) {
+        return false;
+    }
+}
+   /**
+ * Générer une facture PDF
+ */
+public function generateFactureLoyer(Payment $payment): string
+{
+    if ($payment->type !== PaymentType::LOYER) { 
+        throw new \InvalidArgumentException('Seules les factures de type LOYER peuvent être générées.');
+    }
+    
+   // Utiliser notre méthode de validation
+    if (!$this->canGenerateFacture($payment)) {
+        throw new \RuntimeException("Impossible de générer la facture pour ce paiement.");
+    }
+    
+    
+    $data = $this->prepareBaseData($payment);
+    $data['numero_document'] = $this->generateDocumentNumber('F', $payment->id);    
+    return $this->generatePdf('pdfs.facture_loyer', $data);
+}
+
+/**
+ * Vérifier si le mois donné est le mois actuel ou futur
+ */
+private function isCurrentOrFutureMonth(string $month): bool
+{
+    $currentMonth = Carbon::now()->format('Y-m');
+    $targetMonth = Carbon::createFromFormat('Y-m', $month);
+    $currentMonthCarbon = Carbon::createFromFormat('Y-m', $currentMonth);
+    
+    return $targetMonth->greaterThanOrEqualTo($currentMonthCarbon);
+}
 
     /**
      * Déterminer le type de document à générer selon le contexte
@@ -92,15 +167,84 @@ class DocumentGeneratorService
     /**
      * Préparer les données de base communes à tous les documents
      */
-    private function prepareBaseData(Payment $payment): array
-    {
-        return [
-            'payment' => $payment,
-            'tenant' => $payment->tenant,
-            'date_generation' => now(),
-            'montant_total' => $payment->amount,
-        ];
-    }
+  private function prepareBaseData(Payment $payment): array
+{
+    $mois = $payment->current_month;
+    $type = $payment->type;
+    $tenant = $payment->tenant;
+    $flat = $payment->flat;
+
+    $data = [
+        'payment' => $payment,
+        'tenant' => $tenant,
+        'flat' => $flat,
+        'date_generation' => now(),
+        'montant_total' => $payment->amount, 
+        'montant_verse' => $payment->amount_paid,
+        'montant_restant' => $payment->amount - $payment->amount_paid, 
+        
+    ];
+
+    if ($type === PaymentType::LOYER){
+        $mois = $payment->current_month;
+    
+
+    try {
+        $month = Carbon::createFromFormat('Y-m', $mois);
+    } catch (\Exception $e) {
+            throw new \RuntimeException("Le champ current_month est invalide ou absent pour une facture LOYER : '$mois'");
+ }
+
+
+    $loyer = $this->paymentRepository->getCurrentLoyerByFlat($flat);
+    $arrieres = $this->paymentRepository->getArrears($tenant->id, $flat->id, $mois);
+    $montantTotal = $this->paymentRepository->getTotalToPay($loyer, $arrieres);
+    $montantRestant = $this->paymentRepository->getRemainingAmount($montantTotal, $payment->amount_paid);
+
+    $data = array_merge($data, [
+        'mois' => $mois,
+        'type' => $type,
+        'arrieres' => $arrieres,
+        'montant_total' => $montantTotal,
+        'montant_restant' => $montantRestant,
+        'montant_verse' => $payment->amount_paid,
+        'periode_debut' => $month->copy()->startOfMonth()->format('d/m/Y'),
+        'periode_fin' => $month->copy()->endOfMonth()->format('d/m/Y'),
+    ]);
+}
+    return $data;
+}
+
+
+    // private function prepareBaseData(Payment $payment): array
+    // {
+    //     $mois = $payment->current_month;
+    //     $month = Carbon::createFromFormat('Y-m', $mois);
+
+    //     $tenant = $payment->tenant;
+
+    //     // On recupère tous les impayés du mois non payé
+    //     $impayes = $tenant->payment()
+    //     ->where('status', 0)
+    //     ->get();
+
+    //     $remainingAmount = $payment->flat->loyer - $impayes->sum('amount');
+
+    //     return [
+    //         'payment' => $payment,
+    //         'tenant' => $payment->tenant,
+    //         'date_generation' => now(),
+    //         'mois' => $mois,
+    //         'montant_total' => $payment->flat->loyer + $impayes->sum('amount'),
+    //         'montant_verse' => $payment->amount_paid,
+    //         'montant_restant' => $remainingAmount, // Montant restant après versements
+    //         'impayes' => $impayes,            // 'montant_restant' => $payment->amount - $payment->amount_paid,
+    //         'flat' => $payment->flat,
+    //         // Ajout de la période calculée
+    //         'periode_debut' => $month->copy()->startOfMonth()->format('d/m/Y'),
+    //         'periode_fin' => $month->copy()->endOfMonth()->format('d/m/Y'),
+    //     ];
+    // }
 
     /**
      * Générer un numéro de document unique
@@ -156,9 +300,17 @@ class DocumentGeneratorService
     /**
      * Générer le PDF avec les données fournies
      */
-    private function generatePdf(string $view, array $data): string
-    {
-        $pdf = PDF::loadView($view, $data);
-        return $pdf->output();
-    }
+  private function generatePdf(string $view, array $data): string
+{
+    $html = view($view, $data)->render();
+
+    return Browsershot::html($html)
+        ->format('A5')
+        ->margins(10, 10, 10, 10)
+        ->noSandbox() // Important si tu es en local sans root
+        ->disableGpu()
+        ->waitUntilNetworkIdle() // Optionnel : attend le chargement total
+        ->pdf(); // Retourne le binaire du PDF
+}
+
 }

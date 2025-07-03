@@ -16,7 +16,7 @@ class ListPrestataires extends ListRecords
             Actions\CreateAction::make()
                 ->label('Nouveau prestataire')
                 ->icon('heroicon-o-plus')
-                ->color('info'),
+                ,
         ];
     }
     public function getTitle(): string

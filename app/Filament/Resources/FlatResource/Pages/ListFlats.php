@@ -17,7 +17,7 @@ class ListFlats extends ListRecords
             Actions\CreateAction::make()
                 ->label('Ajouter Appartement')
                 ->icon('heroicon-o-plus')
-                ->color('info'),
+                ,
         ];
     }
 

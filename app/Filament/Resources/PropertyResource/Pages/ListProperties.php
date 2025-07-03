@@ -17,7 +17,7 @@ class ListProperties extends ListRecords
             Actions\CreateAction::make()
                 ->label('Nouvelle Immeuble')
                 ->icon('heroicon-o-plus')
-                ->color('info'),
+                ,
         ];
     }
 

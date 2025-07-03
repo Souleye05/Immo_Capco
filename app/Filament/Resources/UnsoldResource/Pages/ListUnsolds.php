@@ -16,7 +16,7 @@ class ListUnsolds extends ListRecords
             Actions\CreateAction::make()
                 ->label('Ajouter impayé')
                 ->icon('heroicon-o-plus')
-                ->color('danger'),
+                ,
         ];
     }
 
