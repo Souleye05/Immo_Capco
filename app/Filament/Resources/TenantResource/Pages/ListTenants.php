@@ -46,25 +46,25 @@ class ListTenants extends ListRecords
             'with_payments' => Tab::make('Avec paiements')
                 ->label('Avec paiements')
                 ->badge(Tenant::has('payment')->count())
-                ->icon('heroicon-o-credit-card')
+                // ->icon('heroicon-o-credit-card')
                 ->modifyQueryUsing(fn (EloquentBuilder $query) => $query->has('payment')),
 
             'without_payments' => Tab::make('Sans paiements')
                 ->label('Sans paiements')
                 ->badge(Tenant::doesntHave('payment')->count())
-                ->icon('heroicon-o-exclamation-triangle')
+                // ->icon('heroicon-o-exclamation-triangle')
                 ->modifyQueryUsing(fn (EloquentBuilder $query) => $query->doesntHave('payment')),
 
             'with_flats' => Tab::make('Avec appartements')
                 ->label('Avec appartements')
                 ->badge(Tenant::has('flatThroughContract')->count())
-                ->icon('heroicon-o-home')
+                // ->icon('heroicon-o-home')
                 ->modifyQueryUsing(fn (EloquentBuilder $query) => $query->has('flatThroughContract')),
 
             'without_flats' => Tab::make('Sans appartements')
                 ->label('Sans appartements')
                 ->badge(Tenant::doesntHave('flatThroughContract')->count())
-                ->icon('heroicon-o-home-modern')
+                // ->icon('heroicon-o-home-modern')
                 ->modifyQueryUsing(fn (EloquentBuilder $query) => $query->doesntHave('flatThroughContract')),
 
         ];

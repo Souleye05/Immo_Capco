@@ -30,42 +30,43 @@ class ListProspects extends ListRecords
         return [
             'all' => Tab::make('Tous')
                 ->badge(Prospect::count())
-                ->icon('heroicon-o-users'),
+                // ->icon('heroicon-o-users')
+                ,
 
             'location' => Tab::make('Location')
                 ->modifyQueryUsing(fn(Builder $query) => $query->whereObjet(['location']))
                 ->badge(Prospect::whereObjet(['location'])->count())
-                ->icon('heroicon-o-key')
+                // ->icon('heroicon-o-key')
                 ->iconPosition(IconPosition::Before),
 
             'vente' => Tab::make('Vente')
                 ->modifyQueryUsing(fn(Builder $query) => $query->whereObjet(['vente']))
                 ->badge(Prospect::whereObjet(['vente'])->count())
-                ->icon('heroicon-o-home')
+                // ->icon('heroicon-o-home')
                 ->iconPosition(IconPosition::Before),
 
             'achat' => Tab::make('Achat')
                 ->modifyQueryUsing(fn(Builder $query) => $query->whereObjet(['achat']))
                 ->badge(Prospect::whereObjet(['achat'])->count())
-                ->icon('heroicon-o-shopping-cart')
+                // ->icon('heroicon-o-shopping-cart')
                 ->iconPosition(IconPosition::Before),
 
             'gerance' => Tab::make('Gérance')
                 ->modifyQueryUsing(fn(Builder $query) => $query->whereObjet(['gerance']))
                 ->badge(Prospect::whereObjet(['gerance'])->count())
-                ->icon('heroicon-o-building-office-2')
+                // ->icon('heroicon-o-building-office-2')
                 ->iconPosition(IconPosition::Before),
 
             'recent' => Tab::make('Récents')
                 ->modifyQueryUsing(fn(Builder $query) => $query->where('created_at', '>=', now()->subWeek()))
                 ->badge(Prospect::where('created_at', '>=', now()->subWeek())->count())
-                ->icon('heroicon-o-clock')
+                // ->icon('heroicon-o-clock')
                 ->iconPosition(IconPosition::Before),
 
             'with_budget' => Tab::make('Avec Budget')
                 ->modifyQueryUsing(fn(Builder $query) => $query->withBudget())
                 ->badge(Prospect::withBudget()->count())
-                ->icon('heroicon-o-currency-euro')
+                // ->icon('heroicon-o-currency-euro')
                 ->iconPosition(IconPosition::Before),
         ];
     }
