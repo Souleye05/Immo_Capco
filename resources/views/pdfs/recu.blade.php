@@ -77,18 +77,20 @@ body {
 
 .date-section {
   text-align: right;
-  font-size: 9px;
+  font-size: 10px;
+  font-style: italic;
   margin-bottom: 10px;
 }
 
 
 .title {
   text-align: center;
-  margin: 20px 0;
+  margin-top: 20px;
+  margin-bottom: 10px;
 }
 
 .title h2 {
-  font-size: 14px;
+  font-size: 16px;
   font-weight: bold;
   letter-spacing: 1px;
 }
@@ -100,21 +102,16 @@ body {
 }
 
 .info-label {
-  font-weight: bold;
   min-width: 100px;
-  font-size: 9px;
+  font-size: 12px;
 }
 
 .info-value {
   flex: 1;
+  font-weight: bold;
   min-height: 16px;
-  margin-left: 8px;
-  font-size: 9px;
-}
-
-.info-row.period-row .info-value {
-  width: 80px;
-  text-align: center;
+  margin-left: 25px;
+  font-size: 12px;
 }
         
 
@@ -126,29 +123,22 @@ body {
             vertical-align: top;
             padding-top: 2px;
         }
+      
         
-        .bailleur-details {
-            margin-left: 50px;
-            line-height: 1.3;
-            font-weight: bold;
-        }
-        
-        .bailleur-details p {
-            margin: 2px 0;
-        }
         
         .invoice-table {
-            width: 100%;
+            width: 70%;
+            margin-left: 15%;
             border-collapse: collapse;
             margin-bottom: 15px;
-            font-size: 9px;
+            font-size: 10px;
         }
         
         .invoice-table th,
         .invoice-table td {
             border: 1px solid #333;
             padding: 6px 8px;
-            text-align: left;
+            text-align: center;
         }
         
         .invoice-table th {
@@ -167,21 +157,25 @@ body {
         }
         
         .footer-notes {
-            font-size: 8px;
-            font-style: italic;
-            color: #666;
+            font-size: 9px;
             margin-bottom: 15px;
             line-height: 1.4;
         }
-        
-        .signature {
+        .numero {
             text-align: right;
-            margin-top: 20px;
+            font-weight: bold;
+            font-size: 12px;
+            margin-top: 10px;
+            margin-bottom: 10px;
         }
+    
         
         .signature-label {
+            text-align: right;
+            margin-top: 20px;
             font-size: 9px;
             font-weight: bold;
+            text-decoration-line: underline;
         }
         
         .signature-name {
@@ -224,19 +218,11 @@ body {
 
         <!-- TITRE -->
     <div class="title">
-      <h2>FACTURE DE LOYER</h2>
+      <h2>REÇU DE PAIEMENT</h2>
     </div>
 
-    <!-- INFORMATIONS LOCATIVES -->
-    <div class="info-row period-row">
-      <span class="info-label">Pour la période du :</span>
-      <span class="info-value" id="periode_debut">
-        {{ $periode_debut }}
-      </span>
-      <span>au</span>
-      <span class="info-value" id="periode_fin">
-        {{ $periode_fin }}
-      </span>
+    <div class="numero">
+        <strong>N°</strong> {{ $numero_document ?? '' }}
     </div>
 
     <div class="info-row">
@@ -255,51 +241,27 @@ body {
 
     <div class="bailleur-section">
             <div style="display: flex; align-items: flex-start;">
-                <span class="info-label">Quittance fournie par le bailleur :</span>
-                <div class="bailleur-details">
-                    <p><strong>CAPCO</strong></p>
-                    <p>Lot 18, Liberté 6 Extension</p>
-                    <p>Immeuble Numéro UNO</p>
-                    <p>DAKAR</p>
-                    <p>789172858 - 775700918</p>
-                    <p style="text-decoration: underline;">K.top@capco.sn</p>
-                </div>
+                <span class="info-label">Nous, <strong>Cabinet CAPCO</strong>, attestons avoir reçu en ce jour du Locataire</span>
             </div>
     </div>
 
     <table class="invoice-table">
     <tr>
-        <td>Loyer pour la période</td>
-        <td class="amount">{{ number_format($flat->loyer, 0, ',', ' ') }} F CFA</td>
+        <td>Montant reçu :</td>
+        <td class="amount">{{ number_format($montant_verse, 0, ',', ' ') }} F CFA</td>
     </tr>
-
-    @if($impayes->isNotEmpty())
-        <tr>
-            <td>Arriérés de loyer dus par le locataire</td>
-            <td class="amount">
-                {{ number_format($impayes->sum('amount'), 0, ',', ' ') }} F CFA
-            </td>
-        </tr>
-    @endif
-
-    <tr class="total-row">
-        <td><strong>Total à payer</strong></td>
-        <td class="amount">
-            <strong>{{ number_format($montant_total, 0, ',', ' ') }} F CFA</strong>
-        </td>
-    </tr>
-</table>
+    </table>
 
 
     <div class="footer-notes">
-        {{ $footer_note1 ?? 'Sauf erreur ou omission, nous vous prions de trouver ci-dessus la situation du ou des loyer(s) du pour le bien que vous occupez.' }}
-        <br><br>
-        {{ $footer_note2 ?? 'Nous vous prions de procéder au règlement de votre facture dans les meilleurs délais.' }}
-    </div>
+        <p>Ce reçu est délivré <strong>à titre provisoire</strong>, en attendant les vérifications internes nécessaires. </p>
+        <p>Une <strong>quittance de loyer définitive</strong> sera remise après validation du paiement effectif et complet.</p>
+        </div>
 
-    <div class="signature">
-        <div class="signature-label">{{ $signature_title ?? 'Le Gérant' }} :</div>
-        <div class="signature-name">{{ $manager_name ?? 'M. Souleymane NIANG' }}</div>
+    
+        <div class="signature-label">
+          <span>La Comptabilité :</span>
+        </div>
     </div>
 </body>
 </html>

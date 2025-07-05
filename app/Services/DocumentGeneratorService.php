@@ -276,6 +276,9 @@ private function isCurrentOrFutureMonth(string $month): bool
         ];
     }
 
+    // générer un numéro de document unique pour la reçu
+
+
     /**
      * Valider qu'un paiement peut avoir une quittance
      */
