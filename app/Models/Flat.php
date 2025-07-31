@@ -6,8 +6,11 @@ namespace App\Models;
 
 use App\Enums\ContractStatus;
 use App\Enums\FlatType;
+use App\Models\Agency;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
+use Illuminate\Database\Eloquent\Relations\BelongsTo;
+use Illuminate\Database\Eloquent\Relations\HasOneThrough;
 
 class Flat extends Model
 {
@@ -25,7 +28,7 @@ class Flat extends Model
         'caution',
     ];
 
-     protected $casts = [
+    protected $casts = [
         'type' => FlatType::class, // Assuming FlatType is a string enum
         'level' => 'string',
     ];
@@ -35,11 +38,11 @@ class Flat extends Model
         return $this->hasMany(Contract::class);
     }
 
-   public function currentTenant()
+    public function currentTenant()
     {
         return $this->hasOneThrough(
-            Tenant::class, 
-            Contract::class, 
+            Tenant::class,
+            Contract::class,
             'flat_id',     // Foreign key sur contracts table
             'id',          // Foreign key sur tenants table  
             'id',          // Local key sur flats table
@@ -50,30 +53,40 @@ class Flat extends Model
     {
         return $this->belongsTo(Property::class);
     }
-    
+
+    // Relation pour le tenant scoping via property
+    public function agencys(): BelongsTo
+    {
+        // Retourne l'agence via la relation property
+        return $this->belongsTo(Agency::class, 'property_id', 'id')
+            ->join('properties', 'agencies.id', '=', 'properties.agency_id')
+            ->where('properties.id', $this->property_id)
+            ->select('agencies.*');
+    }
+
     // public function tenant()
     // {
     //     return $this->belongsTo(Tenant::class, 'tenant_id');
     // }
-public function getCurrentTenantAttribute()
-{
-    return $this->activeContract?->tenant;
-}
+    public function getCurrentTenantAttribute()
+    {
+        return $this->activeContract?->tenant;
+    }
 
 
 
     public function activeContract()
-{
-    return $this->hasOne(Contract::class)
-        ->where('status', ContractStatus::ACTIVE)
-        ->latest('start_date');
-}
+    {
+        return $this->hasOne(Contract::class)
+            ->where('status', ContractStatus::ACTIVE)
+            ->latest('start_date');
+    }
 
 
     public function getIsOccupiedAttribute(): bool
-{
-    return $this->activeContract()->exists();
-}       
+    {
+        return $this->activeContract()->exists();
+    }
 
     public function getStatusAttribute(): string
     {
@@ -84,7 +97,7 @@ public function getCurrentTenantAttribute()
         $activeContract = $this->contracts()
             ->where('status', ContractStatus::ACTIVE)
             ->first();
-            
+
         return $activeContract?->start_date;
     }
 
@@ -116,16 +129,15 @@ public function getCurrentTenantAttribute()
     public function getFullDescriptionAttribute(): string
     {
         $description = $this->designation ?: $this->type->label();
-        
+
         if ($this->reference) {
             $description .= ' (' . $this->reference . ')';
         }
-        
+
         if ($this->level) {
             $description .= ' - Niveau ' . $this->level;
         }
-        
+
         return $description;
     }
-
 }

@@ -4,6 +4,7 @@ namespace App\Models;
 
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
+use Illuminate\Database\Eloquent\Relations\BelongsTo;
 // use Illuminate\Database\Eloquent\SoftDeletes;
 
 class Unsold extends Model
@@ -36,9 +37,9 @@ class Unsold extends Model
     }
 
     public function payment()
-{
-    return $this->belongsTo(Payment::class);
-}
+    {
+        return $this->belongsTo(Payment::class);
+    }
 
     public function versementimp()
     {
@@ -64,12 +65,21 @@ class Unsold extends Model
     {
         return max(0, $this->amount_to_pay - $this->amount_paid); // Montant restant
     }
-    
+
     public static function restoreUnsolds($unsoldIds)
     {
         return self::withTrashed()
             ->whereIn('id', $unsoldIds)
             ->restore();
     }
-    }
 
+    // Relation pour le tenant scoping via tenant
+    public function agencys(): BelongsTo
+    {
+        // Retourne l'agence via la relation tenant
+        return $this->belongsTo(Agency::class, 'tenant_id', 'id')
+            ->join('tenants', 'agencies.id', '=', 'tenants.agency_id')
+            ->where('tenants.id', $this->tenant_id)
+            ->select('agencies.*');
+    }
+}

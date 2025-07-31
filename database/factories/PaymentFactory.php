@@ -2,8 +2,11 @@
 
 namespace Database\Factories;
 
+use App\Models\Agency;
+use App\Models\Contract;
 use App\Models\Flat;
 use App\Models\Tenant;
+use App\Enums\PaymentMethod;
 use Illuminate\Database\Eloquent\Factories\Factory;
 
 /**
@@ -19,14 +22,16 @@ class PaymentFactory extends Factory
     public function definition(): array
     {
         return [
-            'flat_id' => Flat::factory(), // Génère un appartement fictif
+            'agency_id' => Agency::factory(),
+            'contract_id' => Contract::factory(),
+            'flat_id' => Flat::factory(),
             'numero' => $this->faker->unique()->numerify('PAY-#####'),
-            'tenant_id' => Tenant::factory(), // Génère un locataire fictif
+            'tenant_id' => Tenant::factory(),
             'current_month' => $this->faker->monthName(),
-            'amount' => $this->faker->randomFloat(0, 50000, 500000), // Montant entre 50 000 et 500 000
+            'amount' => $this->faker->randomFloat(0, 50000, 500000),
             'status' => $this->faker->boolean(),
-            'date_payment' => today(),
-            'payment_method' => $this->faker->randomElement(['OM', 'Wave', 'Free Money', 'Chèque', 'Virement', 'Espèces']),
+            'date_payment' => $this->faker->dateTimeBetween('-6 months', 'now'),
+            'type' => $this->faker->randomElement(\App\Enums\PaymentType::cases()),
             'created_at' => now(),
         ];
     }

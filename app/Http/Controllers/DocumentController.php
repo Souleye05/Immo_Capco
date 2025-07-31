@@ -15,18 +15,24 @@ class DocumentController extends Controller
     ) {}
 
     /**
-     * Télécharger un reçu pour un versement partiel
+     * Télécharger un reçu pour un paiement
      */
-    public function downloadRecu(Versement $versement): Response
+    public function downloadRecu(Payment $payment): Response
     {
         try {
-            $pdf = $this->documentGenerator->generateRecu($versement);
-            $filename = $this->generateFilename('recu', $versement->id, $versement->versement_date);
+            // Pour un paiement, nous générons une facture de loyer
+            if ($this->documentGenerator->canGenerateFacture($payment)) {
+                $pdf = $this->documentGenerator->generateFactureLoyer($payment);
+                $filename = $this->generateFilename('facture', $payment->id, now());
+            } else {
+                // Fallback : générer un document simple
+                return response(['error' => 'Impossible de générer un document pour ce paiement'], 400);
+            }
 
             return $this->createPdfResponse($pdf, $filename);
         } catch (\Exception $e) {
             Log::error('Erreur génération reçu', [
-                'versement_id' => $versement->id,
+                'payment_id' => $payment->id,
                 'error' => $e->getMessage()
             ]);
 

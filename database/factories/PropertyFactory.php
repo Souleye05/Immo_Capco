@@ -2,6 +2,9 @@
 
 namespace Database\Factories;
 
+use App\Models\Agency;
+use App\Enums\PropertyType;
+use App\Enums\CommissionUnit;
 use Illuminate\Database\Eloquent\Factories\Factory;
 
 /**
@@ -17,12 +20,13 @@ class PropertyFactory extends Factory
     public function definition(): array
     {
         return [
+            'agency_id' => Agency::factory(),
             'name' => $this->faker->company(),
             'address' => $this->faker->address(),
-            'type' => $this->faker->randomElement(['Immeuble', 'Villa', 'Commerce']),
+            'type' => $this->faker->randomElement(PropertyType::cases()),
             'number_flat' => $this->faker->numberBetween(1, 50),
-            'commission_value' => $this->faker->randomFloat(0, 1000, 100000), // Montant entre 1 000 et 100 000
-            'commission_unit' => $this->faker->randomElement(['%', 'F CFA']),
+            'commission_value' => $this->faker->randomFloat(2, 5, 25), // Pourcentage entre 5 et 25
+            'commission_unit' => CommissionUnit::PERCENTAGE,
             'created_at' => now(),
         ];
     }

@@ -3,20 +3,23 @@
 namespace App\Models;
 
 use Illuminate\Database\Eloquent\Model;
+use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 use App\Enums\ContractStatus;
 use App\Services\ContractService;
+use App\Traits\TenantScoped;
 use Carbon\Carbon;
 use Illuminate\Notifications\Notifiable;
 
 class Contract extends Model
 {
-    use Notifiable;
+    use HasFactory, Notifiable, TenantScoped;
     protected $fillable = [
         'property_id',
         'flat_id',
         'tenant_id',
+        'agency_id',
         'contract_number',
         'monthly_rent',
         'cautions',
@@ -31,7 +34,7 @@ class Contract extends Model
         'notes',
         'conditions',
 
-        
+
     ];
 
     protected $casts = [
@@ -48,6 +51,16 @@ class Contract extends Model
     // RELATIONS
     // ============================================
 
+    public function agency(): BelongsTo
+    {
+        return $this->belongsTo(Agency::class);
+    }
+
+    // Relation pour le tenant scoping (pluriel)
+    public function agencys(): BelongsTo
+    {
+        return $this->belongsTo(Agency::class, 'agency_id');
+    }
     public function flat(): BelongsTo
     {
         return $this->belongsTo(Flat::class);
@@ -102,10 +115,10 @@ class Contract extends Model
     // ACCESSORS (délégués au service)
     // ============================================
 
-//    public function notifications()
-//     {
-//         return $this->hasMany(ContractNotification::class);
-//     }
+    //    public function notifications()
+    //     {
+    //         return $this->hasMany(ContractNotification::class);
+    //     }
 
     // Accesseur pour les jours avant expiration
     public function getDaysUntilExpirationAttribute()
@@ -161,8 +174,21 @@ class Contract extends Model
         parent::boot();
 
         static::creating(function ($contract) {
-            if (empty($contract->contract_number)) {
-                $contract->contract_number = app(ContractService::class)->generateContractNumber();
+            // Toujours générer un nouveau numéro, même si un est fourni
+            $contract->contract_number = app(ContractService::class)->generateContractNumber($contract->agency_id);
+        });
+
+        // Protection supplémentaire en cas de duplication lors de la sauvegarde
+        static::saving(function ($contract) {
+            if (!empty($contract->contract_number)) {
+                $existingContract = static::where('contract_number', $contract->contract_number)
+                    ->where('agency_id', $contract->agency_id)
+                    ->where('id', '!=', $contract->id ?? 0)
+                    ->first();
+
+                if ($existingContract) {
+                    $contract->contract_number = app(ContractService::class)->generateContractNumber($contract->agency_id);
+                }
             }
         });
     }

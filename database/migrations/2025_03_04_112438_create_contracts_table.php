@@ -15,6 +15,7 @@ class CreateContractsTable extends Migration
             $table->foreignId('flat_id')->constrained()->onDelete('cascade');
             $table->foreignId('tenant_id')->constrained()->onDelete('cascade');
             $table->foreignId('property_id')->constrained()->onDelete('cascade');
+            $table->foreignId('agency_id')->constrained()->onDelete('cascade');
 
             
             // Informations contractuelles

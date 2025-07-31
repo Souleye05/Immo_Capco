@@ -3,8 +3,12 @@
 namespace App\Providers;
 
 use App\Models\Payment;
+use App\Models\Property;
+use App\Models\Contract;
 use App\Models\Versement;
 use App\Observers\PaymentObserver;
+use App\Observers\PropertyObserver;
+use App\Observers\ContractObserver;
 use App\Observers\VersementObserver;
 use App\Repositories\ExpenseRepository;
 use App\Repositories\FlatRepository;
@@ -30,19 +34,19 @@ class AppServiceProvider extends ServiceProvider
     public function register(): void
     {
         // Enregistrer les repositories
-    $this->app->singleton(FlatRepository::class, FlatRepository::class);
-    $this->app->singleton(PaymentRepository::class, PaymentRepository::class);
-    $this->app->singleton(ExpenseRepository::class, ExpenseRepository::class);
-    $this->app->singleton(DocumentGeneratorService::class, DocumentGeneratorService::class);
+        $this->app->singleton(FlatRepository::class, FlatRepository::class);
+        $this->app->singleton(PaymentRepository::class, PaymentRepository::class);
+        $this->app->singleton(ExpenseRepository::class, ExpenseRepository::class);
+        $this->app->singleton(DocumentGeneratorService::class, DocumentGeneratorService::class);
 
 
-    // Enregistrer les services
-    $this->app->singleton(PaymentService::class, PaymentService::class);
-    $this->app->singleton(ExpenseService::class, ExpenseService::class);
-    $this->app->singleton(InvoiceService::class, InvoiceService::class);
-    $this->app->singleton(VersementService::class, VersementService::class);
-    $this->app->singleton(FactureService::class, FactureService::class);
-}
+        // Enregistrer les services
+        $this->app->singleton(PaymentService::class, PaymentService::class);
+        $this->app->singleton(ExpenseService::class, ExpenseService::class);
+        $this->app->singleton(InvoiceService::class, InvoiceService::class);
+        $this->app->singleton(VersementService::class, VersementService::class);
+        $this->app->singleton(FactureService::class, FactureService::class);
+    }
 
     /**
      * Bootstrap any application services.
@@ -58,30 +62,32 @@ class AppServiceProvider extends ServiceProvider
         $this->callAfterResolving(Schedule::class, function (Schedule $schedule) {
             // Définissez vos tâches planifiées ici
             $schedule->command('payments:generate')
-            // ->monthlyOn(1, '00:00'); // 1er du mois à 00:00
-            ->monthlyOn(1, '08:00')
-             ->timezone('Africa/Dakar');
+                // ->monthlyOn(1, '00:00'); // 1er du mois à 00:00
+                ->monthlyOn(1, '08:00')
+                ->timezone('Africa/Dakar');
 
-             // Vérifier les alertes chaque jour à 8h
-    $schedule->command('contracts:check-renewals')
-             ->dailyAt('08:00')
-             ->withoutOverlapping()
-             ->timezone('Africa/Dakar');
+            // Vérifier les alertes chaque jour à 8h
+            $schedule->command('contracts:check-renewals')
+                ->dailyAt('08:00')
+                ->withoutOverlapping()
+                ->timezone('Africa/Dakar');
         });
         // $this->callAfterResolving(Schedule::class, function (Schedule $schedule) {
         //     // Définissez vos tâches planifiées ici
         //     $schedule->command('payments:generate')->monthlyOn(1, '00:00'); // 1er du mois à 00:00
         // });
 
-        
-        
-        // Enregistrement de l'observer pour le modèle Versement
+
+
+        // Enregistrement des observers pour l'invalidation du cache tenant-aware
+        Property::observe(PropertyObserver::class);
+        Contract::observe(ContractObserver::class);
+        Payment::observe(PaymentObserver::class);
         Versement::observe(VersementObserver::class); // Décommenter si nécessaire
 
-       Filament::registerRenderHook(
-        'panels::auth.login.form.after',
-        fn(): string => view('partials.login-style')->render(),
+        Filament::registerRenderHook(
+            'panels::auth.login.form.after',
+            fn(): string => view('partials.login-style')->render(),
         );
-       
     }
 }

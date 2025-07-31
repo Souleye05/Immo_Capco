@@ -4,6 +4,7 @@ namespace App\Models;
 
 use Illuminate\Database\Eloquent\Model;
 use App\Services\InvoiceService;
+use Illuminate\Database\Eloquent\Relations\BelongsTo;
 
 class RemittancePartial extends Model
 {
@@ -17,27 +18,37 @@ class RemittancePartial extends Model
         'current_month',
         'remittance_date',
     ];
-    
+
     public function remittance()
-{
-    return $this->belongsTo(Remittance::class);
-}
+    {
+        return $this->belongsTo(Remittance::class);
+    }
 
-protected static function booted()
-{
-    static::created(function ($partial) {
-        $service = app(InvoiceService::class);
+    // Relation pour le tenant scoping via remittance -> property
+    public function agencys(): BelongsTo
+    {
+        // Retourne l'agence via la relation remittance -> property
+        return $this->belongsTo(Agency::class, 'remittance_id', 'id')
+            ->join('remittances', 'agencies.id', '=', 'properties.agency_id')
+            ->join('properties', 'remittances.property_id', '=', 'properties.id')
+            ->where('remittances.id', $this->remittance_id)
+            ->select('agencies.*');
+    }
 
-        $fileName = 'quittance_remittance_' . $partial->id . '.pdf';
+    protected static function booted()
+    {
+        static::created(function ($partial) {
+            $service = app(InvoiceService::class);
 
-        $path = $service->generateAndStorePdf(
-            'invoices.receipt',
-            ['partial' => $partial],
-            $fileName
-        );
+            $fileName = 'quittance_remittance_' . $partial->id . '.pdf';
 
-        $partial->update(['receipt_path' => $path]);
-    });
-}
+            $path = $service->generateAndStorePdf(
+                'invoices.receipt',
+                ['partial' => $partial],
+                $fileName
+            );
 
+            $partial->update(['receipt_path' => $path]);
+        });
+    }
 }

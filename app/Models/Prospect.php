@@ -8,6 +8,8 @@ use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Casts\Attribute;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
+use Illuminate\Database\Eloquent\Relations\BelongsTo;
+
 class Prospect extends Model
 {
     use HasFactory;
@@ -25,22 +27,22 @@ class Prospect extends Model
     protected $casts = [
         'objet' => 'array',
         'type' => 'array',
-        
+
     ];
 
-  
+
 
     public function scopeByObjet(Builder $query, string|ProspectObjetEnum $objet): Builder
     {
         $objetValue = $objet instanceof ProspectObjetEnum ? $objet->value : $objet;
-        
+
         return $query->whereJsonContains('objet', $objetValue);
     }
 
     public function scopeByType(Builder $query, string|ProspectTypeEnum $type): Builder
     {
         $typeValue = $type instanceof ProspectTypeEnum ? $type->value : $type;
-        
+
         return $query->whereJsonContains('type', $typeValue);
     }
 
@@ -57,9 +59,9 @@ class Prospect extends Model
     //         }
     //     });
     // }
-   
 
- 
+
+
     // Mutator/Accessor pour le budget avec formatage
     protected function budget(): Attribute
     {
@@ -82,7 +84,7 @@ class Prospect extends Model
     public function scopeWhereObjet(Builder $query, string|array $objet): Builder
     {
         $objets = is_array($objet) ? $objet : [$objet];
-        
+
         return $query->where(function ($q) use ($objets) {
             foreach ($objets as $obj) {
                 $q->orWhereJsonContains('objet', $obj);
@@ -94,7 +96,7 @@ class Prospect extends Model
     public function scopeWhereType(Builder $query, string|array $type): Builder
     {
         $types = is_array($type) ? $type : [$type];
-        
+
         return $query->where(function ($q) use ($types) {
             foreach ($types as $type) {
                 $q->orWhereJsonContains('type', $type);
@@ -148,4 +150,11 @@ class Prospect extends Model
         return $objetMatch && $typeMatch && $secteurMatch;
     }
 
+    // Relation factice pour le tenant scoping Filament
+    // Les prospects peuvent être gérés par différentes agences
+    public function agencys(): BelongsTo
+    {
+        // Retourne une relation vide - les prospects sont gérés globalement
+        return $this->belongsTo(Agency::class, 'id', 'id')->whereRaw('1 = 0');
+    }
 }

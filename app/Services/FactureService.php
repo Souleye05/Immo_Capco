@@ -30,15 +30,15 @@ class FactureService
         $prefix = $type->getPrefix();
         $year = Carbon::now()->format('Y');
         $month = Carbon::now()->format('m');
-        
+
         // Compteur séquentiel par type, année et mois pour éviter les collisions
         $count = Payment::where('type', $type->value)
             ->whereYear('created_at', $year)
             ->whereMonth('created_at', $month)
             ->count() + 1;
-        
+
         $sequence = str_pad($count, 4, '0', STR_PAD_LEFT);
-        
+
         return "{$prefix}-{$year}{$month}-{$sequence}";
     }
 
@@ -46,31 +46,31 @@ class FactureService
      * Générer un numéro de remittance unique selon le type
      */
 
-     public function generateUniqueNumber(RemittanceType $type): string
-     {
-         $prefix = $type->getPrefix();
-         $year = Carbon::now()->format('Y');
-         $month = Carbon::now()->format('m');
-         
-         // Compteur séquentiel par type, année et mois pour éviter les collisions
-         $count = Remittance::where('remittance_type', $type->value)
-             ->whereYear('created_at', $year)
-             ->whereMonth('created_at', $month)
-             ->count() + 1;
-         
-         $sequence = str_pad($count, 4, '0', STR_PAD_LEFT);
-         
-         return "{$prefix}-{$year}{$month}-{$sequence}";
-     }
+    public function generateUniqueNumber(RemittanceType $type): string
+    {
+        $prefix = $type->getPrefix();
+        $year = Carbon::now()->format('Y');
+        $month = Carbon::now()->format('m');
+
+        // Compteur séquentiel par type, année et mois pour éviter les collisions
+        $count = Remittance::where('remittance_type', $type->value)
+            ->whereYear('created_at', $year)
+            ->whereMonth('created_at', $month)
+            ->count() + 1;
+
+        $sequence = str_pad($count, 4, '0', STR_PAD_LEFT);
+
+        return "{$prefix}-{$year}{$month}-{$sequence}";
+    }
     /**
      * Calculer le montant selon le type de facture et l'appartement
      */
     public function calculateAmountByType(PaymentType $type, ?Flat $flat): float
     {
         if (!$flat) {
-        throw new \InvalidArgumentException('Appartement introuvable pour ce locataire.');
-    }
-        return match($type) {
+            throw new \InvalidArgumentException('Appartement introuvable pour ce locataire.');
+        }
+        return match ($type) {
             PaymentType::LOYER => (float) $flat->loyer,
             PaymentType::CAUTION => (float) $flat->caution,
             PaymentType::COMMISSION => $this->flatRepository->calculateCommission($flat, $flat->loyer),
@@ -78,14 +78,20 @@ class FactureService
     }
 
     /**
-     * Vérifie si une caution existe déjà pour ce locataire/appartement
+     * Vérifie si une caution existe déjà pour ce contrat spécifique
      */
-    public function cautionAlreadyExists(int $tenantId, int $flatId): bool
+    public function cautionAlreadyExists(int $tenantId, int $flatId, ?int $contractId = null): bool
     {
-        return Payment::where('tenant_id', $tenantId)
+        $query = Payment::where('tenant_id', $tenantId)
             ->where('flat_id', $flatId)
-            ->where('type', PaymentType::CAUTION->value)
-            ->exists();
+            ->where('type', PaymentType::CAUTION->value);
+
+        // Si un contract_id est fourni, vérifier spécifiquement pour ce contrat
+        if ($contractId) {
+            $query->where('contract_id', $contractId);
+        }
+
+        return $query->exists();
     }
 
     /**
@@ -97,11 +103,11 @@ class FactureService
         if ($type === PaymentType::CAUTION) {
             return false;
         }
-        
+
         if (!$month) {
             return false;
         }
-        
+
         return Payment::where('contract_id', $contractId)
             ->where('type', $type->value)
             ->where('current_month', $month)
@@ -114,7 +120,7 @@ class FactureService
     public function loyerAlreadyExistsForMonth(int $tenantId, int $flatId, ?string $month): bool
     {
         if (!$month) return false;
-        
+
         return Payment::where('tenant_id', $tenantId)
             ->where('flat_id', $flatId)
             ->where('type', PaymentType::LOYER->value)
@@ -129,9 +135,14 @@ class FactureService
 
         switch ($type) {
             case PaymentType::CAUTION:
-                if ($this->cautionAlreadyExists($tenantId, $flatId)) {
+                // Vérifier spécifiquement pour ce contrat si fourni
+                if ($this->cautionAlreadyExists($tenantId, $flatId, $contractId)) {
                     $canCreate = false;
-                    $message = 'Une caution existe déjà pour ce locataire dans cet appartement.';
+                    if ($contractId) {
+                        $message = 'Une caution existe déjà pour ce contrat spécifique.';
+                    } else {
+                        $message = 'Une caution existe déjà pour ce locataire dans cet appartement.';
+                    }
                 }
                 break;
 
@@ -143,7 +154,7 @@ class FactureService
                     $typeLabel = $type->getLabel();
                     $message = "Une facture de type '{$typeLabel}' existe déjà pour ce contrat dans le mois de {$month}.";
                 }
-                
+
                 // Vérification supplémentaire pour le loyer (legacy)
                 if ($canCreate && $type === PaymentType::LOYER && $month && $this->loyerAlreadyExistsForMonth($tenantId, $flatId, $month)) {
                     $canCreate = false;
@@ -171,9 +182,10 @@ class FactureService
 
         $flat = $tenant->flatThroughContract;
         $month = $formData['current_month'] ?? null;
+        $contractId = $formData['contract_id'] ?? null;
 
-        // Validation
-        $validation = $this->canCreatePayment($type, $tenant->id, $flat->id, $month);
+        // Validation avec le contract_id pour une vérification précise
+        $validation = $this->canCreatePayment($type, $tenant->id, $flat->id, $month, $contractId);
         if (!$validation['can_create']) {
             throw new \Exception($validation['message']);
         }
@@ -185,7 +197,7 @@ class FactureService
             'type' => $type->value,
             'tenant_id' => $tenant->id,
             'flat_id' => $flat->id,
-            'contract_id' => $formData['contract_id'],
+            'contract_id' => $contractId,
             'amount' => $amount,
             'current_month' => $month,
             'date_payment' => $formData['date_payment'],
@@ -201,11 +213,11 @@ class FactureService
     public function getPaymentLabel(PaymentType $type, ?string $month = null): string
     {
         $label = $type->getLabel();
-        
+
         if ($type === PaymentType::LOYER && $month) {
             $label .= " - {$month}";
         }
-        
+
         return $label;
     }
 

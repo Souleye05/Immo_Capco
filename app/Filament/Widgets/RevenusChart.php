@@ -4,6 +4,7 @@ namespace App\Filament\Widgets;
 
 use App\Models\Payment;
 use Carbon\Carbon;
+use Filament\Facades\Filament;
 use Filament\Widgets\ChartWidget;
 
 class RevenusChart extends ChartWidget
@@ -11,6 +12,14 @@ class RevenusChart extends ChartWidget
     protected static ?string $heading = 'Revenus du mois';
     // protected static ?string $maxHeight = '400px';
     public ?string $filter = 'mois';
+
+    /**
+     * Obtenir l'agence courante (tenant)
+     */
+    protected function getCurrentTenant()
+    {
+        return Filament::getTenant();
+    }
 
     protected function getFilters(): ?array
     {
@@ -25,7 +34,7 @@ class RevenusChart extends ChartWidget
     }
     protected function getData(): array
     {
-        $query = Payment::query();
+        $tenant = $this->getCurrentTenant();
         $now = Carbon::now();
         $labels = [];
         $data = [];
@@ -33,7 +42,10 @@ class RevenusChart extends ChartWidget
         // 🧠 On adapte les requêtes selon le filtre choisi
         switch ($this->filter) {
             case 'aujourdhui':
-                $query->whereDate('date_payment', $now);
+                $query = Payment::whereDate('date_payment', $now);
+                if ($tenant) {
+                    $query->where('agency_id', $tenant->id);
+                }
                 $labels[] = $now->format('d/m/Y');
                 $data[] = $query->sum('amount');
                 break;
@@ -42,32 +54,47 @@ class RevenusChart extends ChartWidget
                 for ($i = 6; $i >= 0; $i--) {
                     $date = $now->copy()->subDays($i);
                     $labels[] = $date->format('D');
-                    $data[] = Payment::whereDate('date_payment', $date)->sum('amount');
+                    $query = Payment::whereDate('date_payment', $date);
+                    if ($tenant) {
+                        $query->where('agency_id', $tenant->id);
+                    }
+                    $data[] = $query->sum('amount');
                 }
                 break;
 
             case 'mois':
                 for ($i = 1; $i <= 12; $i++) {
                     $labels[] = Carbon::create()->month($i)->format('F');
-                    $data[] = Payment::whereMonth('date_payment', $i)
-                        ->whereYear('date_payment', $now->year)
-                        ->sum('amount');
+                    $query = Payment::whereMonth('date_payment', $i)
+                        ->whereYear('date_payment', $now->year);
+                    if ($tenant) {
+                        $query->where('agency_id', $tenant->id);
+                    }
+                    $data[] = $query->sum('amount');
                 }
                 break;
-            
+
             case 'moisPrecedent':
                 for ($i = 1; $i <= 12; $i++) {
                     $labels[] = Carbon::create()->month($i)->format('F');
-                    $data[] = Payment::whereMonth('date_payment', $i)
-                        ->whereYear('date_payment', $now->year - 1)
-                        ->sum('amount');
-            }    
+                    $query = Payment::whereMonth('date_payment', $i)
+                        ->whereYear('date_payment', $now->year - 1);
+                    if ($tenant) {
+                        $query->where('agency_id', $tenant->id);
+                    }
+                    $data[] = $query->sum('amount');
+                }
+                break;
 
             case 'annee':
                 for ($i = 5; $i >= 0; $i--) {
                     $year = $now->year - $i;
                     $labels[] = (string) $year;
-                    $data[] = Payment::whereYear('date_payment', $year)->sum('amount');
+                    $query = Payment::whereYear('date_payment', $year);
+                    if ($tenant) {
+                        $query->where('agency_id', $tenant->id);
+                    }
+                    $data[] = $query->sum('amount');
                 }
                 break;
         }
@@ -75,7 +102,7 @@ class RevenusChart extends ChartWidget
         return [
             'datasets' => [
                 [
-                    'label' => 'Revenus en FCFA',
+                    'label' => 'Revenus en FCFA' . ($tenant ? ' - ' . $tenant->name : ''),
                     'data' => array_map(fn($value) => round($value / 1000, 1), $data), // 💸 Format en milliers
                     'backgroundColor' => $this->generateColors(count($data)),
                 ],
@@ -92,9 +119,18 @@ class RevenusChart extends ChartWidget
     private function generateColors(int $count): array
     {
         $colors = [
-            '#0ea5e9', '#10b981', '#f59e0b', '#ef4444', '#8b5cf6',
-            '#ec4899', '#14b8a6', '#f97316', '#22c55e', '#6366f1',
-            '#a855f7', '#eab308',
+            '#0ea5e9',
+            '#10b981',
+            '#f59e0b',
+            '#ef4444',
+            '#8b5cf6',
+            '#ec4899',
+            '#14b8a6',
+            '#f97316',
+            '#22c55e',
+            '#6366f1',
+            '#a855f7',
+            '#eab308',
         ];
 
         return array_slice(array_merge($colors, $colors), 0, $count);
