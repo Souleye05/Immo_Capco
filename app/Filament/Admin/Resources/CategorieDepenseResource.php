@@ -19,7 +19,7 @@ class CategorieDepenseResource extends Resource
     protected static ?string $model = CategorieDepense::class;
 
     protected static ?string $navigationIcon = 'heroicon-o-rectangle-stack';
-    protected static ?string $navigationGroup = 'Paiement';
+    protected static ?string $navigationGroup = 'Les Dépenses';
     protected static ?string $navigationLabel = 'Catégories de dépenses';
 
     // Désactiver le tenant scoping automatique

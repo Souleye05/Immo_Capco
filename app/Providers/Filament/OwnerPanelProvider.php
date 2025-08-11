@@ -29,8 +29,8 @@ class OwnerPanelProvider extends PanelProvider
     return $panel
       ->id('owner')
       ->path('owner')
-      ->login()
-      ->registration()
+      // ->login() // Désactivé - utilise le panel de redirection unifié
+      // ->registration() // Désactivé - utilise le panel de redirection unifié
       ->colors([
         'primary' => Color::Green,
       ])

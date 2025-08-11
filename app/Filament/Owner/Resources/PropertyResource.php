@@ -23,23 +23,32 @@ class PropertyResource extends Resource
   protected static ?string $modelLabel = 'Propriété';
   protected static ?string $pluralModelLabel = 'Propriétés';
 
-  // Override the tenant ownership relationship for this resource
+  // Use tenant scoping to automatically filter by agency
   protected static ?string $tenantOwnershipRelationshipName = 'agency';
 
   public static function getEloquentQuery(): Builder
   {
     // Filter properties to show only those owned by the authenticated user
-    // Find the owner record that matches the authenticated user's name
     $user = auth()->user();
-    $owner = \App\Models\Owner::where('name', $user->name)->first();
 
-    if (!$owner) {
-      // If no matching owner found, return empty query
-      return parent::getEloquentQuery()->whereRaw('1 = 0');
+    // Validation: Ensure user is authenticated
+    if (!$user) {
+      throw new \Exception('User must be authenticated to access owner resources');
     }
 
     return parent::getEloquentQuery()
-      ->where('owner_id', $owner->id);
+      ->where(function (Builder $query) use ($user) {
+        // Primary: Filter by direct user_id relation
+        $query->whereHas('owner', function (Builder $subQuery) use ($user) {
+          $subQuery->where('user_id', $user->id);
+        })
+          // Fallback: Filter by email/name matching (like tenant panel)
+          ->orWhereHas('owner', function (Builder $subQuery) use ($user) {
+            $subQuery->where('email', $user->email)
+              ->orWhere('name', 'like', '%' . trim($user->name) . '%');
+          });
+      })
+      ->with(['owner', 'contracts']);
   }
 
   public static function form(Form $form): Form

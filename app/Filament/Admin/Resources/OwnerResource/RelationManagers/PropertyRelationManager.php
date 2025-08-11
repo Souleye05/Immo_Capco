@@ -12,7 +12,7 @@ use Illuminate\Database\Eloquent\SoftDeletingScope;
 
 class PropertyRelationManager extends RelationManager
 {
-    protected static string $relationship = 'Property';
+    protected static string $relationship = 'properties';
     protected static ?string $title = 'Propriétés';
 
     public function form(Form $form): Form
@@ -54,7 +54,7 @@ class PropertyRelationManager extends RelationManager
                 Tables\Columns\TextColumn::make('created_at')
                     ->label('Créé le')
                     ->dateTime('d F Y') // Formater la date au format "07 mai 2025"
-                    ->formatStateUsing(fn ($state) => \Carbon\Carbon::parse($state)->translatedFormat('d F Y')) // Traduire le mois
+                    ->formatStateUsing(fn($state) => \Carbon\Carbon::parse($state)->translatedFormat('d F Y')) // Traduire le mois
                     ->alignCenter(), // Centrer la colonne
             ])
             ->filters([

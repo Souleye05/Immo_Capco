@@ -2,42 +2,109 @@
 
 namespace App\Http\Middleware;
 
+use App\Services\AgencyPermissionService;
 use Closure;
-use Illuminate\Http\Request;
-use Symfony\Component\HttpFoundation\Response;
-use Symfony\Component\HttpKernel\Exception\AccessDeniedHttpException;
 use Filament\Facades\Filament;
+use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Auth;
 
 class PanelAccessMiddleware
 {
     /**
      * Handle an incoming request.
      *
-     * @param  \Closure(\Illuminate\Http\Request): (\Symfony\Component\HttpFoundation\Response)  $next
+     * @param  \Illuminate\Http\Request  $request
+     * @param  \Closure(\Illuminate\Http\Request): (\Illuminate\Http\Response|\Illuminate\Http\RedirectResponse)  $next
+     * @return \Illuminate\Http\Response|\Illuminate\Http\RedirectResponse
      */
-    public function handle(Request $request, Closure $next, string $panel = null): Response
+    public function handle(Request $request, Closure $next)
     {
-        $user = auth()->user();
+        $user = Auth::user();
 
-        // If no user is authenticated, let the auth middleware handle it
+        \Log::info('PanelAccessMiddleware - Request info', [
+            'path' => $request->path(),
+            'user_authenticated' => $user ? true : false,
+            'user_id' => $user?->id,
+        ]);
+
         if (!$user) {
+            \Log::info('PanelAccessMiddleware - No user, redirecting to login');
+            return redirect()->route('login');
+        }
+
+        $currentPanel = Filament::getCurrentPanel();
+        $panelId = $currentPanel?->getId();
+
+        \Log::info('PanelAccessMiddleware - Panel info', [
+            'panel_id' => $panelId,
+            'has_tenancy' => $currentPanel?->hasTenancy(),
+        ]);
+
+        // Permettre l'accès aux panels de login et de redirection
+        if (in_array($panelId, ['login', 'redirection'])) {
+            \Log::info('PanelAccessMiddleware - Login/redirection panel, allowing access');
             return $next($request);
         }
 
-        // Get the current panel from Filament or use the parameter
-        $currentPanel = $panel ? Filament::getPanel($panel) : Filament::getCurrentPanel();
+        // Obtenir l'agence courante pour les panels avec tenant
+        $agency = null;
+        if ($currentPanel?->hasTenancy()) {
+            $agency = Filament::getTenant();
+            \Log::info('PanelAccessMiddleware - Tenant info', [
+                'tenant_id' => $agency?->id,
+                'tenant_slug' => $agency?->slug,
+            ]);
+        }
 
-        if (!$currentPanel) {
+        // Si le panel nécessite un tenant mais qu'aucun n'est défini, 
+        // laisser Filament gérer la sélection de tenant
+        if ($currentPanel?->hasTenancy() && !$agency) {
+            \Log::info('PanelAccessMiddleware - Panel needs tenant but none set, letting Filament handle it');
             return $next($request);
         }
 
-        // Check if user can access this panel
-        if (!$user->canAccessPanel($currentPanel)) {
-            throw new AccessDeniedHttpException(
-                "Accès refusé au panel {$currentPanel->getId()}. Vous n'avez pas les permissions nécessaires."
-            );
+        // Vérifier l'accès au panel
+        $canAccess = AgencyPermissionService::canAccessPanel($user, $panelId, $agency);
+        \Log::info('PanelAccessMiddleware - Access check', [
+            'can_access' => $canAccess,
+            'panel_id' => $panelId,
+        ]);
+
+        if (!$canAccess) {
+            \Log::info('PanelAccessMiddleware - Access denied, redirecting');
+            // Rediriger vers le panel approprié
+            if ($agency) {
+                $redirectUrl = AgencyPermissionService::getPanelUrl($user, $agency);
+            } else {
+                $redirectUrl = route('login');
+            }
+
+            return redirect()->to($redirectUrl)->with('error', 'Vous n\'avez pas accès à ce panel.');
         }
+
+        // Vérifier l'accès à l'agence pour les panels avec tenant
+        if ($agency && !$this->userHasAccessToAgency($user, $agency)) {
+            \Log::info('PanelAccessMiddleware - No access to agency, redirecting to login');
+            return redirect()->route('login')
+                ->with('error', 'Vous n\'avez pas accès à cette agence.');
+        }
+
+        \Log::info('PanelAccessMiddleware - Access granted, continuing');
 
         return $next($request);
+    }
+
+    /**
+     * Vérifier si un utilisateur a accès à une agence spécifique
+     *
+     * @param  mixed  $user
+     * @param  mixed  $agency
+     * @return bool
+     */
+    private function userHasAccessToAgency($user, $agency): bool
+    {
+        // Utiliser AgencyPermissionService pour vérifier l'accès
+        $accessibleAgencies = AgencyPermissionService::getAccessibleAgencies($user);
+        return $accessibleAgencies->contains('id', $agency->id);
     }
 }

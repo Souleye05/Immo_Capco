@@ -18,10 +18,8 @@ class OwnerFactory extends Factory
     public function definition(): array
     {
         return [
-            //
             'name' => $this->faker->name(),
             'phone' => $this->faker->phoneNumber(),
-            'property_id' => Property::factory(),
             'created_at' => now(),
         ];
     }

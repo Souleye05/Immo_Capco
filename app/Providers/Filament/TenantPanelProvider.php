@@ -29,8 +29,8 @@ class TenantPanelProvider extends PanelProvider
     return $panel
       ->id('tenant')
       ->path('tenant')
-      ->login()
-      ->registration()
+      // ->login() // Désactivé - utilise le panel de redirection unifié
+      // ->registration() // Désactivé - utilise le panel de redirection unifié
       ->colors([
         'primary' => Color::Blue,
         'success' => Color::Green,

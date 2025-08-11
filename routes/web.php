@@ -4,13 +4,25 @@ use App\Http\Controllers\ContractPdfController;
 use App\Http\Controllers\DocumentController;
 use Illuminate\Support\Facades\Route;
 
+// Route de connexion personnalisée pour éviter les conflits avec Filament
+Route::get('/login', [App\Http\Controllers\AuthController::class, 'showLoginForm'])->name('login');
+Route::post('/login', [App\Http\Controllers\AuthController::class, 'login'])->name('login.submit');
+
+// Redirections pour maintenir la compatibilité avec les anciennes URLs de connexion
+Route::redirect('/super-admin/login', '/login');
+Route::redirect('/admin/login', '/login');
+Route::redirect('/owner/login', '/login');
+Route::redirect('/tenant/login', '/login');
+
+// Route racine qui affiche la page welcome
 Route::get('/', function () {
-    return view('/welcome');
+    return view('welcome');
 });
 
-
-
-// Route::redirect('/', '/admin/login');
+// Ancienne route de bienvenue (commentée car remplacée par la redirection)
+// Route::get('/', function () {
+//     return view('/welcome');
+// });
 
 // Dans routes/web.php
 // Route::middleware(['auth'])->group(function () {
@@ -54,6 +66,20 @@ Route::get('/documents/facture/{payment}', [DocumentController::class, 'download
 Route::get('/payments/{payment}/receipt', [DocumentController::class, 'downloadRecu'])
     ->name('payments.receipt')
     ->middleware(['auth']);
+
+// Route temporaire pour forcer la déconnexion et nettoyer les sessions
+Route::get('/force-logout', function () {
+    \Illuminate\Support\Facades\Auth::logout();
+    \Illuminate\Support\Facades\Session::flush();
+    \Illuminate\Support\Facades\Session::regenerate();
+
+    // Nettoyer les cookies Filament
+    $response = redirect('/login/login');
+    $response->withCookie(cookie()->forget('filament_session'));
+    $response->withCookie(cookie()->forget('laravel_session'));
+
+    return $response->with('message', 'Déconnexion forcée effectuée. Vous pouvez maintenant vous reconnecter.');
+});
 
 // Routes pour l'activation des comptes locataires
 Route::prefix('tenant')->name('tenant.')->group(function () {

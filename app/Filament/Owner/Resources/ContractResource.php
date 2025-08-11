@@ -23,24 +23,34 @@ class ContractResource extends Resource
   protected static ?string $modelLabel = 'Contrat';
   protected static ?string $pluralModelLabel = 'Contrats';
 
-  // Override the tenant ownership relationship for this resource
+  // Use tenant scoping to automatically filter by agency
   protected static ?string $tenantOwnershipRelationshipName = 'agency';
 
   public static function getEloquentQuery(): Builder
   {
     // Filter contracts to show only those for properties owned by the authenticated user
-    // Find the owner record that matches the authenticated user's name
     $user = auth()->user();
-    $owner = \App\Models\Owner::where('name', $user->name)->first();
 
-    if (!$owner) {
-      // If no matching owner found, return empty query
-      return parent::getEloquentQuery()->whereRaw('1 = 0');
+    // Validation: Ensure user is authenticated
+    if (!$user) {
+      throw new \Exception('User must be authenticated to access owner resources');
     }
 
     return parent::getEloquentQuery()
-      ->whereHas('property', function (Builder $query) use ($owner) {
-        $query->where('owner_id', $owner->id);
+      ->where(function (Builder $query) use ($user) {
+        // Primary: Filter by direct user_id relation through property owner
+        $query->whereHas('property', function (Builder $subQuery) use ($user) {
+          $subQuery->whereHas('owner', function (Builder $ownerQuery) use ($user) {
+            $ownerQuery->where('user_id', $user->id);
+          });
+        })
+          // Fallback: Filter by email/name matching through property owner
+          ->orWhereHas('property', function (Builder $subQuery) use ($user) {
+            $subQuery->whereHas('owner', function (Builder $ownerQuery) use ($user) {
+              $ownerQuery->where('email', $user->email)
+                ->orWhere('name', 'like', '%' . trim($user->name) . '%');
+            });
+          });
       })
       ->with(['tenant', 'property', 'flat']);
   }
@@ -187,14 +197,19 @@ class ContractResource extends Resource
 
         Tables\Columns\TextColumn::make('days_until_expiration')
           ->label('Jours restants')
-          ->state(fn($record) => Carbon::now()->diffInDays($record->end_date, false))
+          // ->state(fn($record) => Carbon::now()->diffInDays($record->end_date, false))
+          ->state(function ($record) {
+            if ($record->status !== ContractStatus::ACTIVE) return '-';
+            $days = round($record->days_until_expiration);
+            return $days > 0 ? $days . ' jours' : 'Expiré';
+        })
           ->formatStateUsing(function ($state) {
             if ($state < 0) {
               return 'Expiré depuis ' . abs($state) . ' jours';
             } elseif ($state == 0) {
               return 'Expire aujourd\'hui';
             } else {
-              return $state . ' jours';
+              return $state . ' ';
             }
           })
           ->color(function ($state) {

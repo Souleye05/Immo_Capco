@@ -82,56 +82,6 @@ class OwnerResource extends Resource
                         'unique' => 'Cette adresse email est déjà utilisée par un autre propriétaire.',
                         'max' => 'L\'adresse email ne peut pas dépasser 255 caractères.',
                     ]),
-                Select::make('property_id')
-                    ->label('Propriété')
-                    ->options(Property::all()->pluck('name', 'id'))
-                    ->searchable()
-                    ->createOptionForm([
-                        Select::make('type')
-                            ->label('Type de propriété')
-                            ->options([
-                                'Immeuble' => 'Immeuble',
-                                'Villa' => 'Villa',
-                                'Commerce' => 'Commerce'
-                            ])
-                            ->required(),
-                        TextInput::make('name')
-                            ->label('Nom')
-                            ->required(),
-                        TextInput::make('address')
-                            ->label('Adresse')
-                            ->required(),
-                        TextInput::make('commission_value')
-                            ->label('Commission sur la propriété')
-                            ->numeric(),
-                        Select::make('commission_unit')
-                            ->label('Unité')
-                            ->options([
-                                '%' => '%',
-                                'F CFA' => 'F CFA'
-                            ])
-                            ->required(),
-                        TextInput::make('number_flat')
-                            ->label("Nombre d'appartement dans la propriété")
-                            ->numeric()
-                            ->minValue(1),
-                    ])
-                    ->createOptionUsing(function (array $data) {
-                        return Property::create([
-                            'type' => $data['type'],
-                            'name' => $data['name'],
-                            'address' => $data['address'],
-                            'commission_value' => $data['commission_value'],
-                            'commission_unit' => $data['commission_unit'],
-                            'number_flat' => $data['number_flat'],
-                        ])->id;
-                    })
-                    ->createOptionAction(function ($action) {
-                        return $action
-                            ->modalHeading('Créer une nouvelle propriété')
-                            ->modalButton('Créer propriété')
-                            ->modalWidth('lg');
-                    })
             ]);
     }
 
@@ -147,10 +97,15 @@ class OwnerResource extends Resource
                     ->label('Téléphone')
                     ->searchable()
                     ->sortable(),
-                Tables\Columns\TextColumn::make('property.name')
-                    ->label('Propriété')
-                    ->searchable()
+                Tables\Columns\TextColumn::make('properties_count')
+                    ->label('Nombre de propriétés')
+                    ->counts('properties')
                     ->sortable(),
+                Tables\Columns\TextColumn::make('properties.name')
+                    ->label('Propriétés')
+                    ->listWithLineBreaks()
+                    ->limitList(3)
+                    ->expandableLimitedList(),
                 Tables\Columns\TextColumn::make('created_at')
                     ->label('Créé le')
                     ->dateTime('d/m/Y H:i')
@@ -195,7 +150,7 @@ class OwnerResource extends Resource
         ];
     }
 
-    // Scoping personnalisé pour filtrer par agence via property
+    // Scoping personnalisé pour filtrer par agence via properties
     public static function getEloquentQuery(): Builder
     {
         $query = parent::getEloquentQuery();
@@ -204,8 +159,12 @@ class OwnerResource extends Resource
             // Debug: Log pour voir si cette méthode est appelée
             \Log::info('OwnerResource getEloquentQuery called with tenant: ' . $tenant->name . ' (ID: ' . $tenant->id . ')');
 
-            $query->whereHas('property', function ($subQuery) use ($tenant) {
-                $subQuery->where('agency_id', $tenant->id);
+            // Inclure les owners qui ont des propriétés dans cette agence
+            // OU les owners qui n'ont pas encore de propriétés (pour permettre l'édition après création)
+            $query->where(function ($subQuery) use ($tenant) {
+                $subQuery->whereHas('properties', function ($propertyQuery) use ($tenant) {
+                    $propertyQuery->where('agency_id', $tenant->id);
+                })->orWhereDoesntHave('properties');
             });
         } else {
             \Log::info('OwnerResource getEloquentQuery called but no tenant found');

@@ -102,7 +102,7 @@ class AgencyResource extends Resource
         Tables\Columns\TextColumn::make('owners_count')
           ->label('Owners')
           ->getStateUsing(function (Model $record): int {
-            return Owner::whereHas('property.flats.contracts', function ($query) use ($record) {
+            return Owner::whereHas('properties.flats.contracts', function ($query) use ($record) {
               $query->where('agency_id', $record->id);
             })->count();
           })
@@ -230,7 +230,7 @@ class AgencyResource extends Resource
             Infolists\Components\TextEntry::make('owners_count')
               ->label('Total Owners')
               ->getStateUsing(function (Model $record): int {
-                return Owner::whereHas('property.flats.contracts', function ($query) use ($record) {
+                return Owner::whereHas('properties.flats.contracts', function ($query) use ($record) {
                   $query->where('agency_id', $record->id);
                 })->count();
               })
@@ -240,7 +240,7 @@ class AgencyResource extends Resource
             Infolists\Components\TextEntry::make('owners_with_active_contracts')
               ->label('Owners with Active Contracts')
               ->getStateUsing(function (Model $record): int {
-                return Owner::whereHas('property.flats.contracts', function ($query) use ($record) {
+                return Owner::whereHas('properties.flats.contracts', function ($query) use ($record) {
                   $query->where('agency_id', $record->id)
                     ->where('status', 'active');
                 })->count();
@@ -265,21 +265,23 @@ class AgencyResource extends Resource
             Infolists\Components\RepeatableEntry::make('owners_list')
               ->label('Property Owners')
               ->getStateUsing(function (Model $record): array {
-                return Owner::whereHas('property.flats.contracts', function ($query) use ($record) {
+                return Owner::whereHas('properties.flats.contracts', function ($query) use ($record) {
                   $query->where('agency_id', $record->id);
                 })
-                  ->with(['property'])
+                  ->with(['properties'])
                   ->get()
                   ->map(function ($owner) use ($record) {
-                    $activeContracts = Contract::whereHas('flat', function ($query) use ($owner) {
-                      $query->where('property_id', $owner->property_id);
+                    // Calculer les contrats actifs pour toutes les propriétés de ce owner
+                    $activeContracts = Contract::whereHas('flat.property', function ($query) use ($owner) {
+                      $query->whereIn('id', $owner->properties->pluck('id'));
                     })
                       ->where('agency_id', $record->id)
                       ->where('status', 'active')
                       ->count();
 
-                    $totalRevenue = Payment::whereHas('contract.flat', function ($query) use ($owner) {
-                      $query->where('property_id', $owner->property_id);
+                    // Calculer le revenu total pour toutes les propriétés de ce owner
+                    $totalRevenue = Payment::whereHas('contract.flat.property', function ($query) use ($owner) {
+                      $query->whereIn('id', $owner->properties->pluck('id'));
                     })
                       ->whereHas('contract', function ($query) use ($record) {
                         $query->where('agency_id', $record->id);
@@ -287,11 +289,15 @@ class AgencyResource extends Resource
                       ->where('status', true)
                       ->sum('amount');
 
+                    // Afficher les noms de toutes les propriétés
+                    $propertyNames = $owner->properties->pluck('name')->join(', ');
+                    $propertyAddresses = $owner->properties->pluck('address')->join('; ');
+
                     return [
                       'name' => $owner->name,
                       'phone' => $owner->phone,
-                      'property' => $owner->property->name ?? 'N/A',
-                      'property_address' => $owner->property->address ?? 'N/A',
+                      'property' => $propertyNames ?: 'N/A',
+                      'property_address' => $propertyAddresses ?: 'N/A',
                       'active_contracts' => $activeContracts,
                       'total_revenue' => number_format($totalRevenue, 2) . ' €',
                     ];

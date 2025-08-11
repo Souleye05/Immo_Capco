@@ -61,11 +61,16 @@ class User extends Authenticatable implements HasTenants
     }
 
     // Alias pour compatibilité avec le code existant
-    public function agencys(): BelongsToMany
+    // public function agencys(): BelongsToMany
+    // {
+    //     return $this->agencies();
+    // }
+    // Dans App\Models\User
+    public function agencys()
     {
-        return $this->agencies();
+        return $this->belongsToMany(Agency::class, 'agency_user')
+            ->withTimestamps();
     }
-
     /**
      * Properties owned by this user
      */
@@ -155,7 +160,9 @@ class User extends Authenticatable implements HasTenants
      */
     public function managedAgencies(): BelongsToMany
     {
-        return $this->agencys()->wherePivot('role', 'manager');
+        // Pour l'instant, retourner toutes les agences de l'utilisateur
+        // La logique de gestion sera gérée via les rôles Spatie ou AgencyRoles
+        return $this->agencys();
     }
 
     /**
@@ -252,5 +259,193 @@ class User extends Authenticatable implements HasTenants
     public function hasAnyAgencyRole(): bool
     {
         return $this->agencyRoles()->exists();
+    }
+
+    /**
+     * Obtient toutes les propriétés possédées par cet utilisateur
+     */
+    public function getOwnedProperties(): \Illuminate\Database\Eloquent\Collection
+    {
+        // Méthode principale : via les relations owner records
+        $propertiesViaOwners = Property::whereHas('owner', function ($query) {
+            $query->where('user_id', $this->id);
+        })->get();
+
+        // Fallback : via email/nom matching
+        $propertiesViaMatching = Property::whereHas('owner', function ($query) {
+            $query->where('email', $this->email)
+                ->orWhere('name', 'like', '%' . trim($this->name) . '%');
+        })->get();
+
+        // Fusionner et dédupliquer
+        return $propertiesViaOwners->merge($propertiesViaMatching)->unique('id');
+    }
+
+    /**
+     * Obtient tous les contrats liés aux propriétés de cet utilisateur
+     */
+    public function getOwnedContracts(): \Illuminate\Database\Eloquent\Collection
+    {
+        $propertyIds = $this->getOwnedProperties()->pluck('id')->toArray();
+
+        return Contract::whereIn('property_id', $propertyIds)->get();
+    }
+
+    /**
+     * Obtient tous les paiements liés aux contrats de cet utilisateur
+     */
+    public function getOwnedPayments(): \Illuminate\Database\Eloquent\Collection
+    {
+        $contractIds = $this->getOwnedContracts()->pluck('id')->toArray();
+
+        return Payment::whereIn('contract_id', $contractIds)->get();
+    }
+
+    /**
+     * Vérifie si cet utilisateur peut accéder au panel owner
+     */
+    public function canAccessOwnerPanel(): bool
+    {
+        try {
+            // Vérification des rôles
+            if ($this->hasRole('owner') || $this->hasPermissionTo('access_owner_panel')) {
+                return true;
+            }
+
+            // Vérification des propriétés possédées
+            return $this->getOwnedProperties()->isNotEmpty();
+        } catch (\Exception $e) {
+            // Log the error and deny access for security
+            \Log::warning('Error checking owner panel access', [
+                'user_id' => $this->id,
+                'error' => $e->getMessage(),
+            ]);
+            return false;
+        }
+    }
+
+    /**
+     * Obtient les statistiques de propriétaire pour cet utilisateur
+     */
+    public function getOwnerStats(): array
+    {
+        $properties = $this->getOwnedProperties();
+        $contracts = $this->getOwnedContracts();
+        $payments = $this->getOwnedPayments();
+
+        return [
+            'properties_count' => $properties->count(),
+            'contracts_count' => $contracts->count(),
+            'active_contracts_count' => $contracts->where('status', \App\Enums\ContractStatus::ACTIVE)->count(),
+            'payments_count' => $payments->count(),
+            'total_revenue' => $payments->sum('amount_paid'),
+            'pending_revenue' => $payments->sum('amount_remaining'),
+            'agencies' => $this->agencys->pluck('name')->toArray(),
+        ];
+    }
+
+    /**
+     * Valide la cohérence des données de propriétaire pour cet utilisateur
+     */
+    public function validateOwnerDataConsistency(): array
+    {
+        $issues = [];
+
+        // Vérifier les owner records
+        $ownerRecords = $this->ownerRecords;
+        if ($ownerRecords->isEmpty()) {
+            $issues[] = 'No owner records found for this user';
+        }
+
+        // Vérifier la cohérence des agences
+        $userAgencyIds = $this->agencys->pluck('id')->toArray();
+        $propertyAgencyIds = $this->getOwnedProperties()->pluck('agency_id')->unique()->toArray();
+
+        $missingAgencies = array_diff($propertyAgencyIds, $userAgencyIds);
+        if (!empty($missingAgencies)) {
+            $issues[] = 'User not associated with agencies: ' . implode(', ', $missingAgencies);
+        }
+
+        // Vérifier les rôles
+        if (!$this->hasRole('owner') && $this->getOwnedProperties()->isNotEmpty()) {
+            $issues[] = 'User has properties but no owner role';
+        }
+
+        return $issues;
+    }
+
+    /**
+     * Synchronise automatiquement les données de propriétaire pour cet utilisateur
+     */
+    // public function syncOwnerData(): array
+    // {
+    //     $results = [
+    //         'agencies_synced' => [],
+    //         'roles_assigned' => [],
+    //         'issues_found' => [],
+    //     ];
+
+    //     try {
+    //         // Synchroniser les agences
+    //         $propertyAgencyIds = $this->getOwnedProperties()->pluck('agency_id')->unique()->filter()->toArray();
+    //         foreach ($propertyAgencyIds as $agencyId) {
+    //             if (!$this->agencys()->whereKey($agencyId)->exists()
+    //             ) {
+    //                 $this->agencys()->attach($agencyId, [
+    //                     'created_at' => now(),
+    //                     'updated_at' => now(),
+    //                 ]);
+    //                 $results['agencies_synced'][] = $agencyId;
+    //             }
+    //         }
+
+    //         // Assigner le rôle owner si nécessaire
+    //         if (!$this->hasRole('owner') && $this->getOwnedProperties()->isNotEmpty()) {
+    //             $this->assignRole('owner');
+    //             $results['roles_assigned'][] = 'owner';
+    //         }
+    //     } catch (\Exception $e) {
+    //         $results['issues_found'][] = $e->getMessage();
+    //     }
+
+    //     return $results;
+    // }
+
+    public function syncOwnerData(): array
+    {
+        $results = [
+            'agencies_synced' => [],
+            'roles_assigned' => [],
+            'issues_found' => [],
+        ];
+
+        try {
+            // Synchroniser les agences
+            $propertyAgencyIds = $this->getOwnedProperties()
+                ->pluck('agency_id')
+                ->unique()
+                ->filter()
+                ->toArray();
+
+            foreach ($propertyAgencyIds as $agencyId) {
+                if (!$this->agencys()->whereKey($agencyId)->exists()) {
+                    $this->agencys()->attach($agencyId, [
+                        'created_at' => now(),
+                        'updated_at' => now(),
+                    ]);
+                    $results['agencies_synced'][] = $agencyId;
+                }
+            }
+
+            // Assigner le rôle owner si nécessaire
+            if (!$this->hasRole('owner') && $this->getOwnedProperties()->isNotEmpty()) {
+                $this->assignRole('owner');
+                $results['roles_assigned'][] = 'owner';
+            }
+        } catch (\Exception $e) {
+            $results['issues_found'][] = $e->getMessage();
+        }
+
+        return $results;
     }
 }

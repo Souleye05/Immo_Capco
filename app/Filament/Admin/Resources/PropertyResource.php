@@ -39,7 +39,7 @@ class PropertyResource extends Resource
     {
         return $form
             ->schema([
-                Forms\Components\Section::make()
+                Forms\Components\Section::make('Informations de base')
                     ->schema([
                         Forms\Components\Select::make('type')
                             ->label('Type de propriété')
@@ -52,17 +52,69 @@ class PropertyResource extends Resource
                             ->required()
                             ->maxLength(255),
 
-
                         Forms\Components\TextInput::make('address')
                             ->label('Adresse')
                             ->required()
                             ->maxLength(500),
 
+                        Forms\Components\Select::make('owner_id')
+                            ->label('Propriétaire')
+                            ->relationship('owner', 'name')
+                            ->searchable(['name', 'phone'])
+                            ->preload()
+                            ->helperText('Sélectionnez un propriétaire existant ou créez-en un nouveau')
+                            ->createOptionForm([
+                                Forms\Components\TextInput::make('name')
+                                    ->label('Nom & Prénoms')
+                                    ->required()
+                                    ->maxLength(255),
+                                Forms\Components\TextInput::make('phone')
+                                    ->label('Téléphone')
+                                    ->tel()
+                                    ->required()
+                                    ->maxLength(255),
+                                Forms\Components\TextInput::make('email')
+                                    ->label('Email')
+                                    ->email()
+                                    ->required()
+                                    ->maxLength(255)
+                                    ->helperText('Un compte utilisateur sera automatiquement créé avec cette adresse email pour permettre l\'accès au portail propriétaire.')
+                                    ->validationMessages([
+                                        'required' => 'L\'adresse email est obligatoire.',
+                                        'email' => 'Veuillez saisir une adresse email valide.',
+                                        'unique' => 'Cette adresse email est déjà utilisée.',
+                                    ]),
+                            ])
+                            ->createOptionUsing(function (array $data) {
+                                // Récupérer l'agence courante
+                                $currentTenant = \Filament\Facades\Filament::getTenant();
+                                if (!$currentTenant) {
+                                    throw new \Exception('Aucune agence sélectionnée');
+                                }
 
+                                // Utiliser le service pour créer l'owner avec utilisateur
+                                $ownerUserService = app(\App\Services\OwnerUserService::class);
+
+                                $ownerData = [
+                                    'name' => $data['name'],
+                                    'phone' => $data['phone'],
+                                    'property_id' => null, // Sera mis à jour après création de la property
+                                ];
+
+                                $owner = $ownerUserService->createOwnerWithAgency($ownerData, $data['email'], $currentTenant->id);
+
+                                return $owner->id;
+                            })
+                            ->createOptionAction(function ($action) {
+                                return $action
+                                    ->modalHeading('Créer un nouveau propriétaire')
+                                    ->modalButton('Créer propriétaire')
+                                    ->modalWidth('lg');
+                            }),
                     ])
                     ->columns(2),
 
-                Forms\Components\Section::make()
+                Forms\Components\Section::make('Informations financières')
                     ->schema([
                         Forms\Components\TextInput::make('commission_value')
                             ->label('Commission sur la propriété')
@@ -306,6 +358,8 @@ class PropertyResource extends Resource
     {
         return $table
             ->columns([
+                Tables\Columns\TextColumn::make("owner.name")
+                    ->label("Propriétaire"),
 
                 Tables\Columns\TextColumn::make('type')
                     ->label('Type')
@@ -364,9 +418,16 @@ class PropertyResource extends Resource
                 self::getPropertyTypeFilter(),
             ])
             ->actions([
-                Tables\Actions\ViewAction::make(),
-                Tables\Actions\EditAction::make(),
-                self::getFinancialDetailsAction(),
+                Tables\Actions\ActionGroup::make([
+                    Tables\Actions\ViewAction::make(),
+                    Tables\Actions\EditAction::make(),
+                    self::getFinancialDetailsAction(),
+                ])
+                    ->label('Actions')
+                    ->icon('heroicon-m-ellipsis-vertical')
+                    ->size('sm')
+                    ->color('gray')
+                    ->button(),
             ])
             ->bulkActions([
                 Tables\Actions\BulkActionGroup::make([

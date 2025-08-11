@@ -16,6 +16,7 @@ use App\Models\Property;
 use App\Models\Tenant;
 use App\Services\FactureService;
 use App\Services\PaymentService;
+use App\Services\RemittanceValidationService;
 use Closure;
 use Filament\Forms\Form;
 use Filament\Resources\Resource;
@@ -109,25 +110,140 @@ class RemittanceResource extends Resource
                     ->dehydrated(true)
                     ->required(),
 
+                Flatpickr::make('current_month')
+                    ->label('Mois concerné')
+                    ->monthSelect()
+                    ->required()
+                    ->visible(fn(callable $get) => $get('remittance_type') === 'loyer')
+                    ->reactive()
+                    ->rules([
+                        function (callable $get) {
+                            return function (string $attribute, $value, Closure $fail) use ($get) {
+                                $remittanceType = $get('remittance_type');
+                                $ownerId = $get('owner_id');
+                                $year = $get('current_year') ?? now()->year;
+
+                                if ($remittanceType === 'loyer' && $ownerId && $value) {
+                                    // Récupérer la propriété du propriétaire
+                                    $owner = Owner::find($ownerId);
+
+                                    if ($owner && $owner->property()) {
+                                        $property = $owner->property();
+                                        // Vérifier si un reversement de loyer existe déjà pour ce mois, cette année et cette propriété
+                                        $exists = Remittance::where('property_id', $property->id)
+                                            ->where('remittance_type', 'loyer')
+                                            ->where('current_month', $value)
+                                            ->where('current_year', $year)
+                                            ->exists();
+
+                                        if ($exists) {
+                                            $months = [
+                                                1 => 'Janvier',
+                                                2 => 'Février',
+                                                3 => 'Mars',
+                                                4 => 'Avril',
+                                                5 => 'Mai',
+                                                6 => 'Juin',
+                                                7 => 'Juillet',
+                                                8 => 'Août',
+                                                9 => 'Septembre',
+                                                10 => 'Octobre',
+                                                11 => 'Novembre',
+                                                12 => 'Décembre'
+                                            ];
+                                            $monthName = $months[$value] ?? $value;
+
+                                            RemittanceValidationService::createWarningNotification(
+                                                'Doublon détecté',
+                                                "Un reversement de loyer existe déjà pour {$monthName} {$year} pour cette propriété.",
+                                                [
+                                                    'Vérifier l\'historique des reversements pour cette période',
+                                                    'Sélectionner un autre mois si nécessaire',
+                                                    'Consulter le statut du reversement existant'
+                                                ]
+                                            )->send();
+                                        }
+                                    }
+                                }
+                            };
+                        }
+                    ])
+                    ->afterStateUpdated(function ($state, callable $set, callable $get) {
+                        // Recalculer quand le mois change
+                        $remittanceType = $get('remittance_type');
+                        $ownerId = $get('owner_id');
+
+                        if ($remittanceType === 'loyer' && $ownerId) {
+                            self::calculateRemittanceAmount($remittanceType, $ownerId, null, $set, $get);
+                        }
+                    }),
+
+                Select::make('current_year')
+                    ->label('Année concernée')
+                    ->options(collect(range(2020, 2030))->mapWithKeys(fn($year) => [$year => $year]))
+                    ->required()
+                    ->visible(fn(callable $get) => $get('remittance_type') === 'loyer')
+                    ->default(now()->year)
+                    ->dehydrated(true)
+                    ->reactive()
+                    ->afterStateUpdated(function ($state, callable $set, callable $get) {
+                        $remittanceType = $get('remittance_type');
+                        $ownerId = $get('owner_id');
+
+                        if ($remittanceType === 'loyer' && $ownerId) {
+                            self::calculateRemittanceAmount($remittanceType, $ownerId, null, $set, $get);
+                        }
+                    }),
+
                 Select::make('owner_id')
                     ->label('Propriétaire')
-                    ->options(Owner::all()->pluck('name', 'id'))
+                    ->options(function () {
+                        return Owner::all()
+                            ->filter(function ($owner) {
+                                return $owner->hasValidPropertyForRemittance();
+                            })
+                            ->pluck('name', 'id');
+                    })
                     ->searchable()
                     ->reactive()
                     ->required()
+                    ->rules([
+                        'required',
+                        'exists:owners,id',
+                        function () {
+                            return function (string $attribute, $value, Closure $fail) {
+                                if (!$value) {
+                                    $fail('Un propriétaire doit être sélectionné.');
+                                    return;
+                                }
+
+                                $owner = Owner::find($value);
+                                if (!$owner) {
+                                    $fail('Le propriétaire sélectionné n\'existe pas.');
+                                    return;
+                                }
+
+                                // Validate owner has valid property for remittance
+                                if (!$owner->hasValidPropertyForRemittance()) {
+                                    $validationErrors = $owner->getRemittanceValidationErrors();
+                                    $errorMessage = 'Le propriétaire sélectionné ne peut pas créer de reversement: ' . implode(', ', $validationErrors);
+                                    $fail($errorMessage);
+                                    return;
+                                }
+
+                                // Additional validation for property_id
+                                $property = $owner->property();
+                                if (!$property || !$property->id) {
+                                    $fail('Le propriétaire sélectionné n\'a pas de propriété valide associée.');
+                                    return;
+                                }
+                            };
+                        }
+                    ])
                     ->afterStateUpdated(function ($state, callable $set, callable $get) {
-                        $owner = Owner::find($state);
-
-                        if ($owner) {
-                            $propertyId = $owner->property_id;
-                            $set('property_id', $propertyId);
-
-                            $remittanceType = $get('remittance_type');
-                            if ($remittanceType) {
-                                self::calculateRemittanceAmount($remittanceType, $state, $get('tenant_id'), $set, $get);
-                            }
-                        } else {
-                            // Reset des champs si pas de propriétaire
+                        // Early validation before processing
+                        if (!$state) {
+                            // Reset all fields if no owner selected
                             $set('property_id', null);
                             $set('commission', 0);
                             $set('expenses', 0);
@@ -137,6 +253,59 @@ class RemittanceResource extends Resource
                             $set('status', 'Pending');
                             $set('current_month', now()->month);
                             $set('current_year', now()->year);
+                            return;
+                        }
+
+                        $owner = Owner::find($state);
+                        if (!$owner) {
+                            RemittanceValidationService::createErrorNotification(
+                                'Erreur de validation',
+                                'Le propriétaire sélectionné n\'existe pas.',
+                                [
+                                    'Vérifier que le propriétaire n\'a pas été supprimé',
+                                    'Actualiser la page et réessayer',
+                                    'Contacter l\'administrateur si le problème persiste'
+                                ]
+                            )->send();
+                            return;
+                        }
+
+                        // Validate owner can create remittance
+                        if (!$owner->hasValidPropertyForRemittance()) {
+                            RemittanceValidationService::notifyOwnerValidationFailure($owner);
+
+                            // Reset fields
+                            $set('property_id', null);
+                            $set('commission', 0);
+                            $set('expenses', 0);
+                            $set('amount_to_transfer', 0);
+                            $set('amount', 0);
+                            $set('remaining', 0);
+                            return;
+                        }
+
+                        // Get property and validate it exists
+                        $property = $owner->property();
+                        if (!$property || !$property->id) {
+                            RemittanceValidationService::createErrorNotification(
+                                'Erreur de propriété',
+                                'Le propriétaire sélectionné n\'a pas de propriété valide associée.',
+                                [
+                                    'Associer une propriété à ce propriétaire',
+                                    'Vérifier la configuration du propriétaire',
+                                    'Contacter l\'administrateur système'
+                                ]
+                            )->send();
+                            return;
+                        }
+
+                        // Set property_id
+                        $set('property_id', $property->id);
+
+                        // Calculate remittance amount if type is selected
+                        $remittanceType = $get('remittance_type');
+                        if ($remittanceType) {
+                            self::calculateRemittanceAmount($remittanceType, $state, $get('tenant_id'), $set, $get);
                         }
                     }),
 
@@ -169,12 +338,15 @@ class RemittanceResource extends Resource
 
                                 if ($remittanceExists) {
                                     // Un reversement de caution existe déjà pour ce locataire
-                                    Notification::make()
-                                        ->title('Erreur de validation')
-                                        ->body('Un reversement de caution existe déjà pour ce locataire.')
-                                        ->danger()
-                                        ->persistent()
-                                        ->send();
+                                    RemittanceValidationService::createWarningNotification(
+                                        'Reversement de caution existant',
+                                        'Un reversement de caution existe déjà pour ce locataire dans cette propriété.',
+                                        [
+                                            'Vérifier l\'historique des reversements de ce locataire',
+                                            'Consulter le statut du reversement existant',
+                                            'Sélectionner un autre locataire si nécessaire'
+                                        ]
+                                    )->send();
                                     $fail('Un reversement de caution existe déjà pour ce locataire dans ce bien.');
                                 }
                             }
@@ -195,7 +367,51 @@ class RemittanceResource extends Resource
                     ->relationship('property', 'name')
                     ->searchable()
                     ->preload()
-                    ->required(),
+                    ->required()
+                    ->rules([
+                        'required',
+                        'exists:properties,id',
+                        function () {
+                            return function (string $attribute, $value, Closure $fail) {
+                                if (!$value) {
+                                    $fail('Une propriété doit être sélectionnée.');
+                                    return;
+                                }
+
+                                // Validate property exists and has required data
+                                $property = Property::find($value);
+                                if (!$property) {
+                                    $fail('La propriété sélectionnée n\'existe pas.');
+                                    return;
+                                }
+
+                                // Validate property has agency association
+                                if (!$property->agency_id) {
+                                    $fail('La propriété sélectionnée n\'est pas associée à une agence.');
+                                    return;
+                                }
+
+                                // Validate property has flats for payment calculations
+                                if ($property->flats()->count() === 0) {
+                                    $fail('La propriété sélectionnée n\'a pas d\'appartements associés pour les calculs de paiement.');
+                                    return;
+                                }
+
+                                // Validate commission settings exist
+                                if (!$property->commission_value) {
+                                    $fail('La propriété sélectionnée n\'a pas de valeur de commission configurée.');
+                                    return;
+                                }
+
+                                if (!$property->commission_unit) {
+                                    $fail('La propriété sélectionnée n\'a pas d\'unité de commission configurée.');
+                                    return;
+                                }
+                            };
+                        }
+                    ])
+                    ->disabled()
+                    ->dehydrated(true),
 
                 TextInput::make('commission')
                     ->label('Commission')
@@ -233,73 +449,7 @@ class RemittanceResource extends Resource
                     ->disabled()
                     ->dehydrated(true),
 
-                Flatpickr::make('current_month')
-                    ->label('Mois concerné')
-                    ->monthSelect()
-                    ->required()
-                    ->visible(fn(callable $get) => $get('remittance_type') === 'loyer')
-                    ->reactive()
-                    ->rules([
-                        function (callable $get) {
-                            return function (string $attribute, $value, Closure $fail) use ($get) {
-                                $remittanceType = $get('remittance_type');
-                                $ownerId = $get('owner_id');
-                                $year = $get('current_year') ?? now()->year;
 
-                                if ($remittanceType === 'loyer' && $ownerId && $value) {
-                                    // Récupérer la propriété du propriétaire
-                                    $owner = Owner::find($ownerId);
-
-                                    if ($owner && $owner->property_id) {
-                                        // Vérifier si un reversement de loyer existe déjà pour ce mois, cette année et cette propriété
-                                        $exists = Remittance::where('property_id', $owner->property_id)
-                                            ->where('remittance_type', 'loyer')
-                                            ->where('current_month', $value)
-                                            ->where('current_year', $year);
-
-
-                                        if ($exists) {
-                                            $months = [
-                                                1 => 'Janvier',
-                                                2 => 'Février',
-                                                3 => 'Mars',
-                                                4 => 'Avril',
-                                                5 => 'Mai',
-                                                6 => 'Juin',
-                                                7 => 'Juillet',
-                                                8 => 'Août',
-                                                9 => 'Septembre',
-                                                10 => 'Octobre',
-                                                11 => 'Novembre',
-                                                12 => 'Décembre'
-                                            ];
-                                            $monthName = $months[$value] ?? $value;
-
-                                            Notification::make()
-                                                ->title('Doublon détecté')
-                                                ->body("Un reversement de loyer existe déjà pour {$monthName} {$year} pour cette propriété.")
-                                                ->warning()
-                                                ->send();
-                                            // $fail("Un reversement de loyer existe déjà pour {$monthName} {$year} pour cette propriété.");
-                                        }
-                                    }
-                                }
-                            };
-                        }
-                    ])
-                    ->afterStateUpdated(function ($state, callable $set, callable $get) {
-                        // Recalculer quand le mois change
-                        $remittanceType = $get('remittance_type');
-                        $ownerId = $get('owner_id');
-
-                        if ($remittanceType === 'loyer' && $ownerId) {
-                            self::calculateRemittanceAmount($remittanceType, $ownerId, null, $set, $get);
-                        }
-                    }),
-
-                TextInput::make('current_year')
-                    ->hidden()
-                    ->dehydrated(true),
 
                 DatePicker::make('remittance_date')
                     ->label('Date de création du reversement')
@@ -313,10 +463,80 @@ class RemittanceResource extends Resource
      */
     private static function calculateRemittanceAmount($remittanceType, $ownerId, $tenantId, callable $set, callable $get)
     {
-        $owner = Owner::find($ownerId);
-        if (!$owner) return;
+        // Early validation - check if ownerId is provided
+        if (!$ownerId) {
+            RemittanceValidationService::createErrorNotification(
+                'Erreur de calcul',
+                'Aucun propriétaire sélectionné pour le calcul du reversement.',
+                [
+                    'Sélectionner un propriétaire valide',
+                    'Vérifier que le formulaire est correctement rempli',
+                    'Actualiser la page si nécessaire'
+                ]
+            )->send();
+            return;
+        }
 
-        $propertyId = $owner->property_id;
+        // Find and validate owner
+        $owner = Owner::find($ownerId);
+        if (!$owner) {
+            RemittanceValidationService::createErrorNotification(
+                'Erreur de calcul',
+                'Le propriétaire sélectionné n\'existe pas.',
+                [
+                    'Vérifier que le propriétaire n\'a pas été supprimé',
+                    'Sélectionner un autre propriétaire',
+                    'Contacter l\'administrateur si le problème persiste'
+                ]
+            )->send();
+            return;
+        }
+
+        // Validate owner can create remittance
+        if (!$owner->hasValidPropertyForRemittance()) {
+            RemittanceValidationService::notifyOwnerValidationFailure($owner);
+            return;
+        }
+
+        // Get property and validate it exists
+        $property = $owner->property();
+        if (!$property || !$property->id) {
+            RemittanceValidationService::createErrorNotification(
+                'Erreur de propriété',
+                'Le propriétaire n\'a pas de propriété valide associée.',
+                [
+                    'Associer une propriété à ce propriétaire',
+                    'Vérifier la configuration du propriétaire',
+                    'Contacter l\'administrateur système'
+                ]
+            )->send();
+            return;
+        }
+
+        $propertyId = $property->id;
+
+        // Validate property_id is not null before service calls
+        if ($propertyId === null) {
+            RemittanceValidationService::createErrorNotification(
+                'Erreur de propriété',
+                'L\'ID de la propriété est null, impossible de calculer le reversement.',
+                [
+                    'Vérifier l\'intégrité des données de la propriété',
+                    'Contacter l\'administrateur système',
+                    'Actualiser la page et réessayer'
+                ]
+            )->send();
+
+            // Reset form fields to prevent invalid state
+            $set('commission', 0);
+            $set('expenses', 0);
+            $set('amount_to_transfer', 0);
+            $set('remaining', 0);
+            $set('amount', 0);
+            $set('status', 'Pending');
+            return;
+        }
+
         $paymentService = app(PaymentService::class);
         $month = $get('current_month') ?: now()->month;
         $year = $get('current_year') ?: now()->year;
@@ -327,7 +547,16 @@ class RemittanceResource extends Resource
 
         try {
             if ($remittanceType === 'loyer') {
-                // Calculer pour les loyers
+                // Additional validation for rent calculations
+                if ($month < 1 || $month > 12) {
+                    throw new \InvalidArgumentException('Mois invalide pour le calcul du loyer');
+                }
+
+                if ($year < 2020 || $year > 2030) {
+                    throw new \InvalidArgumentException('Année invalide pour le calcul du loyer');
+                }
+
+                // Calculer pour les loyers - with null check
                 $amount = $paymentService->calculateLoyerTransferAmount($propertyId, $month, $year);
                 $stats = $paymentService->getPropertyFinancialStats($propertyId, $month, $year);
 
@@ -336,7 +565,13 @@ class RemittanceResource extends Resource
                 $set('amount_to_transfer', $amount);
                 $set('remaining', $amount);
             } elseif ($remittanceType === 'caution' && $tenantId) {
-                // Calculer pour les cautions
+                // Validate tenant exists before calculation
+                $tenant = Tenant::find($tenantId);
+                if (!$tenant) {
+                    throw new \InvalidArgumentException('Le locataire sélectionné n\'existe pas');
+                }
+
+                // Calculer pour les cautions - with null checks
                 $amount = $paymentService->getTenantCautionAmount($tenantId, $propertyId);
 
                 $set('commission', 0);
@@ -349,13 +584,55 @@ class RemittanceResource extends Resource
                 $set('expenses', 0);
                 $set('amount_to_transfer', 0);
                 $set('remaining', 0);
+            } else {
+                // Invalid remittance type
+                throw new \InvalidArgumentException('Type de reversement invalide: ' . $remittanceType);
             }
 
             $set('amount', 0);
             $set('status', 'Pending');
             $set('current_month', $month);
             $set('current_year', $year);
+
+            // Success notification for successful calculation
+            RemittanceValidationService::notifyCalculationSuccess($remittanceType, $amount ?? 0);
+        } catch (\InvalidArgumentException $e) {
+            // Handle validation errors with specific messages
+            RemittanceValidationService::notifyCalculationFailure($remittanceType, [
+                'month' => $month,
+                'year' => $year,
+                'error' => $e->getMessage()
+            ]);
+
+            // Reset form fields
+            $set('commission', 0);
+            $set('expenses', 0);
+            $set('amount_to_transfer', 0);
+            $set('remaining', 0);
+            $set('amount', 0);
+            $set('status', 'Pending');
         } catch (\Exception $e) {
+            // Handle general errors
+            RemittanceValidationService::createErrorNotification(
+                'Erreur de calcul',
+                'Une erreur inattendue s\'est produite lors du calcul du reversement.',
+                [
+                    'Vérifier les données saisies',
+                    'Contacter l\'administrateur système si le problème persiste',
+                    'Consulter les logs pour plus de détails'
+                ]
+            )->send();
+
+            // Log the error for debugging
+            \Log::error('RemittanceResource calculateRemittanceAmount error', [
+                'remittanceType' => $remittanceType,
+                'ownerId' => $ownerId,
+                'tenantId' => $tenantId,
+                'propertyId' => $propertyId,
+                'error' => $e->getMessage(),
+                'trace' => $e->getTraceAsString()
+            ]);
+
             // En cas d'erreur, réinitialiser les valeurs
             $set('commission', 0);
             $set('expenses', 0);
@@ -597,7 +874,13 @@ class RemittanceResource extends Resource
 
                 Tables\Filters\SelectFilter::make('owner_id')
                     ->label('Propriétaire')
-                    ->relationship('owner', 'name')
+                    ->options(function () {
+                        return Owner::all()
+                            ->filter(function ($owner) {
+                                return $owner->hasValidPropertyForRemittance();
+                            })
+                            ->pluck('name', 'id');
+                    })
                     ->searchable()
                     ->placeholder('Tous les propriétaires'),
 

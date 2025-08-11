@@ -32,7 +32,7 @@ class ExpenseResource extends Resource
 
     // Désactiver le tenant scoping automatique pour ce modèle
     protected static ?string $tenantOwnershipRelationshipName = null;
-    protected static ?string $navigationGroup = 'Paiement';
+    protected static ?string $navigationGroup = 'Les Dépenses';
 
     public static ?string $label = 'dépenses';
 

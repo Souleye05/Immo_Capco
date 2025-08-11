@@ -26,9 +26,15 @@ class CreateOwner extends CreateRecord
         unset($data['email']);
 
         try {
+            // Récupérer l'agence courante
+            $currentTenant = \Filament\Facades\Filament::getTenant();
+            if (!$currentTenant) {
+                throw new \Exception('Aucune agence sélectionnée');
+            }
+
             // Utiliser le service pour créer le propriétaire avec l'utilisateur
             $ownerUserService = app(OwnerUserService::class);
-            $owner = $ownerUserService->createOwnerWithUser($data, $email);
+            $owner = $ownerUserService->createOwnerWithAgency($data, $email, $currentTenant->id);
 
             // Déterminer si c'est un nouvel utilisateur ou existant
             $user = $owner->user;
